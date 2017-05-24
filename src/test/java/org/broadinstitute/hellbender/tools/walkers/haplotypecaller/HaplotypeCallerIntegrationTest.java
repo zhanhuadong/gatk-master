@@ -10,6 +10,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.test.ArgumentsBuilder;
 import org.broadinstitute.hellbender.utils.test.IntegrationTestSpec;
+import org.broadinstitute.hellbender.utils.test.SamAssertionUtils;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -280,7 +281,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
     }
 
     @Test(dataProvider = "bamoutVariations")
-    public void testBamoutProducesReasonablySizedOutput(final boolean createBamoutIndex, final boolean createBamoutMD5) {
+    public void testBamoutProducesReasonablySizedOutput(final boolean createBamoutIndex, final boolean createBamoutMD5) throws IOException {
         Utils.resetRandomGenerator();
 
         // We will test that when running with -bamout over the testInterval, we produce
@@ -327,6 +328,9 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
 
         final File expectedMD5File = new File(bamOutput.getAbsolutePath() + ".md5");
         Assert.assertEquals(expectedMD5File.exists(), createBamoutMD5);
+
+        // Check the output BAN header contains all of the inout BAM header Program Records (@PG)
+        SamAssertionUtils.assertOutBamContainsInBamProgramRecords(new File(NA12878_20_21_WGS_bam), bamOutput);
     }
 
     @Test
