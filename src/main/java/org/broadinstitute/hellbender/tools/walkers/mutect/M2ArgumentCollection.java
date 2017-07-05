@@ -125,7 +125,7 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
     @Argument(fullName="annotation", shortName="A", doc="One or more specific annotations to apply to variant calls.", optional = true)
     protected List<String> annotationsToUse = new ArrayList<>(Arrays.asList(new String[]{"Coverage", "DepthPerAlleleBySample",
             "TandemRepeat", "OxoGReadCounts", "ClippedBases", "ReadPosition", "BaseQuality", "MappingQuality",
-            "FragmentLength", "StrandArtifact"}));
+            "FragmentLength", "StrandArtifact", "ReferenceBases"}));
 
     /**
      * Which groups of annotations to add to the output VCF file. The single value 'none' removes the default group.

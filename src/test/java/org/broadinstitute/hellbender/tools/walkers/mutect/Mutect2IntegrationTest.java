@@ -56,8 +56,8 @@ public class Mutect2IntegrationTest extends CommandLineProgramTest {
         final String[] args = {
                 "-I", tumorBam.getAbsolutePath(),
                 "-tumor", tumorSample,
-                "-I", normalBam.getAbsolutePath(),
-                "-normal", normalSample,
+                //"-I", normalBam.getAbsolutePath(),
+                //"-normal", normalSample,
                 "-R", b37_reference_20_21,
                 "-L", "20",
                 "-germline_resource", GNOMAD.getAbsolutePath(),
