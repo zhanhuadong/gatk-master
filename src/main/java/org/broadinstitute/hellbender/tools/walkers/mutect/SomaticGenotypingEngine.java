@@ -5,6 +5,8 @@ import htsjdk.variant.variantcontext.*;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.distribution.BetaDistribution;
+import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.DefaultRealMatrixChangingVisitor;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -18,6 +20,7 @@ import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBased
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerUtils;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyResultSet;
 import org.broadinstitute.hellbender.utils.*;
+import org.broadinstitute.hellbender.utils.downsampling.ReadsDownsampler;
 import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.genotyper.SampleList;
@@ -42,6 +45,9 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
     public final String tumorSampleName;
     private final String matchedNormalSampleName;
     final boolean hasNormal;
+
+    // Distribution of het downsampling fractions in training mode
+    private RealDistribution hetDownsamplingDistribution;
 
     //Mutect2 does not run in GGA mode
     private static final List<VariantContext> NO_GIVEN_ALLELES = Collections.emptyList();
@@ -68,6 +74,9 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
         this.tumorSampleName = tumorSampleName;
         this.matchedNormalSampleName = matchedNormalSampleName;
         hasNormal = matchedNormalSampleName != null;
+
+        // TODO: fixed seed
+        hetDownsamplingDistribution = new BetaDistribution(MTAC.hetDownsamplingAlpha, MTAC.hetDownsamplingBeta);
     }
 
     /**
@@ -153,10 +162,30 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
             }
 
             addGenotypes(subsettedLog10TumorMatrix, subsettedLog10NormalMatrix, callVcb);
+
+
+            if (MTAC.trainingMode) {
+                final List<GATKRead> altReads = log10Likelihoods
+                        .bestAlleles()
+                        .stream()
+                        .filter(ba -> ba.allele.isNonReference())
+                        .map(ba -> ba.read)
+                        .collect(Collectors.toList());
+
+                final double originalAltFraction = (double) altReads.size() / log10Likelihoods.readCount();
+
+                if (originalAltFraction > 0.3) {
+                    final double fractionToDiscard = 1 - hetDownsamplingDistribution.sample();
+                    Collections.shuffle(altReads);
+                    final List<GATKRead> readsToDiscard = altReads.subList(0, (int) (altReads.size() * fractionToDiscard));
+                    log10Likelihoods.removeSampleReads(log10Likelihoods.indexOfSample(MTAC.tumorSampleName), readsToDiscard);
+                }
+
+                callVcb.attribute(GATKVCFConstants.ORIGINAL_AF_VCF_ATTRIBUTE, originalAltFraction);
+            }
+
             final VariantContext call = callVcb.make();
-            final ReadLikelihoods<Allele> log10LikelihoodsForAnotations = prepareReadAlleleLikelihoodsForAnnotation(log10ReadLikelihoods, Collections.emptyMap(),
-                    false, alleleMapper, log10Likelihoods, call);
-            final VariantContext annotatedCall =  annotationEngine.annotateContext(call, featureContext, referenceContext, log10LikelihoodsForAnotations, a -> true);
+            final VariantContext annotatedCall =  annotationEngine.annotateContext(call, featureContext, referenceContext, log10Likelihoods, a -> true);
 
             call.getAlleles().stream().map(alleleMapper::get).filter(Objects::nonNull).forEach(calledHaplotypes::addAll);
             returnCalls.add( annotatedCall );
@@ -281,7 +310,7 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
                 }
             }
 
-            likelihoods.removeSampleReads(likelihoods.indexOfSample(sample), readsToDiscard, likelihoods.numberOfAlleles());
+            likelihoods.removeSampleReads(likelihoods.indexOfSample(sample), readsToDiscard);
         }
     }
 

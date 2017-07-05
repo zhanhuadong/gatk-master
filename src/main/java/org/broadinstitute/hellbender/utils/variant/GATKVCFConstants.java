@@ -104,6 +104,7 @@ public final class GATKVCFConstants {
     public static final String TUMOR_LOD_KEY =                      "TLOD";
     public static final String NORMAL_LOD_KEY =                     "NLOD";
     public static final String IN_PON_VCF_ATTRIBUTE =               "IN_PON";
+    public static final String ORIGINAL_AF_VCF_ATTRIBUTE =          "AF_ORIG";
     public static final String NORMAL_ARTIFACT_LOD_ATTRIBUTE =      "N_ART_LOD";
     public static final String POPULATION_AF_VCF_ATTRIBUTE =        "POP_AF";
     public static final String GERMLINE_POSTERIORS_VCF_ATTRIBUTE =  "P_GERMLINE";

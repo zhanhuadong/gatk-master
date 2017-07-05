@@ -172,6 +172,7 @@ public class GATKVCFHeaderLines {
         addInfoLine(new VCFInfoHeaderLine(NORMAL_LOD_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "Normal LOD score"));
         addInfoLine(new VCFInfoHeaderLine(TUMOR_LOD_KEY, VCFHeaderLineCount.A, VCFHeaderLineType.String, "Tumor LOD score"));
         addInfoLine(new VCFInfoHeaderLine(IN_PON_VCF_ATTRIBUTE, 0, VCFHeaderLineType.Flag, "site found in panel of normals"));
+        addInfoLine(new VCFInfoHeaderLine(ORIGINAL_AF_VCF_ATTRIBUTE, 1, VCFHeaderLineType.Float, "Original allele fraction of alt allele before training mode downsampling."));
         addInfoLine(new VCFInfoHeaderLine(POPULATION_AF_VCF_ATTRIBUTE, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "population allele frequencies of alt alleles"));
         addInfoLine(new VCFInfoHeaderLine(GERMLINE_POSTERIORS_VCF_ATTRIBUTE, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "Posterior probability for alt allele to be germline variants"));
         addInfoLine(new VCFInfoHeaderLine(NORMAL_ARTIFACT_LOD_ATTRIBUTE, VCFHeaderLineCount.A, VCFHeaderLineType.Float, "log odds of artifact in normal with same allele fraction as tumor"));

@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.mutect;
 
+import com.google.common.collect.Lists;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -135,5 +136,26 @@ public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection 
      */
     @Argument(fullName = "group", shortName = "G", doc = "One or more classes/groups of annotations to apply to variant calls", optional = true)
     public List<String> annotationGroupsToUse = new ArrayList<>(Arrays.asList(new String[]{}));
+
+
+    /***************************************/
+    // Training mode arguments
+    /***************************************/
+
+
+    @Argument(fullName = "training_mode", shortName = "training", doc = "If true, generate training data for panel of normals", optional = true)
+    protected boolean trainingMode = false;
+
+    /**
+     * In training mode, we downsample the alt reads of germline variants by a fraction drawn from a beta distribution.  That is,
+     * we retain fraction f of alt reads where f ~ Beta(alpha, beta).
+     */
+    @Advanced
+    @Argument(fullName="hetDownsamplingAlpha", shortName="alpha", doc="Alpha parameter for beta distribution of downsampling fractions", optional = true)
+    public double hetDownsamplingAlpha = 1.0;
+
+    @Advanced
+    @Argument(fullName="hetDownsamplingBeta", shortName="beta", doc="Beta parameter for beta distribution of downsampling fractions", optional = true)
+    public double hetDownsamplingBeta = 1.0;
 
 }

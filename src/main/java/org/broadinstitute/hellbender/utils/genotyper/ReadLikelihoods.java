@@ -945,7 +945,7 @@ public final class ReadLikelihoods<A extends Allele> implements SampleList, Alle
                 removeSampleReads(s, removeIndices, alleleCount);
             } else {
                 final Map<A,List<GATKRead>> readsByBestAllelesMap = readsByBestAlleleMap(s);
-                removeSampleReads(s, AlleleBiasedDownsamplingUtils.selectAlleleBiasedReads(readsByBestAllelesMap, fraction),alleleCount);
+                removeSampleReads(s, AlleleBiasedDownsamplingUtils.selectAlleleBiasedReads(readsByBestAllelesMap, fraction));
             }
         }
     }
@@ -1199,7 +1199,7 @@ public final class ReadLikelihoods<A extends Allele> implements SampleList, Alle
 
 
     // Requires that the collection passed iterator can remove elements, and it can be modified.
-    public void removeSampleReads(final int sampleIndex, final Collection<GATKRead> readsToRemove, final int alleleCount) {
+    public void removeSampleReads(final int sampleIndex, final Collection<GATKRead> readsToRemove) {
         final GATKRead[] sampleReads = readsBySampleIndex[sampleIndex];
         final int sampleReadCount = sampleReads.length;
 
@@ -1244,6 +1244,7 @@ public final class ReadLikelihoods<A extends Allele> implements SampleList, Alle
         }
 
         // Then we skim out the likelihoods of the removed reads.
+        final int alleleCount = numberOfAlleles();
         final double[][] oldSampleValues = valuesBySampleIndex[sampleIndex];
         final double[][] newSampleValues = new double[alleleCount][newSampleReadCount];
         for (int a = 0; a < alleleCount; a++) {

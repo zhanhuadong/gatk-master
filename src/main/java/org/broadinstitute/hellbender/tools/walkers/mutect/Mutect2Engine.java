@@ -31,6 +31,7 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
+import org.broadinstitute.hellbender.utils.variant.GATKVCFIndexType;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -174,6 +175,9 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         headerInfo.add(new VCFHeaderLine("Mutect Version", MUTECT_VERSION));
 
         GATKVCFConstants.STANDARD_MUTECT_INFO_FIELDS.stream().map(GATKVCFHeaderLines::getInfoLine).forEach(headerInfo::add);
+        if (MTAC.trainingMode) {
+            headerInfo.add(GATKVCFHeaderLines.getInfoLine(GATKVCFConstants.ORIGINAL_AF_VCF_ATTRIBUTE));
+        }
 
         headerInfo.add(GATKVCFHeaderLines.getFormatLine(GATKVCFConstants.ALLELE_FRACTION_KEY));
 
@@ -281,10 +285,13 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
 
         // because new pileups must be allocated when getting the tumor and normal pileups, we first
         // opportunistically check whether the combined pileup has no evidence of variation, which we will define as
-        // having at most one variant read
+        // having at most one variant read.
+        // In training mode, we're only working with a single normal bam.
         final int totalNonRef = countNonRef(refBase, context);
         if (totalNonRef < MTAC.minVariantsInPileup) {
             return new ActivityProfileState(refInterval, 0.0);
+        } else if (MTAC.trainingMode) {
+            return new ActivityProfileState( refInterval, 1.0, ActivityProfileState.Type.NONE, null);
         }
 
         final Map<String, AlignmentContext> splitContexts = context.splitContextBySampleName(header);
