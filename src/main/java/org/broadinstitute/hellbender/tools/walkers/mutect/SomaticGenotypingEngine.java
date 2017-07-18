@@ -125,6 +125,27 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
                     new SimpleInterval(mergedVC).expandWithinContig(ALLELE_EXTENSION, header.getSequenceDictionary()));
             filterOverlappingReads(log10Likelihoods, mergedVC.getReference(), loc, false);
 
+            OptionalDouble originalAF = OptionalDouble.empty();
+            if (MTAC.trainingMode) {
+                final List<GATKRead> altReads = log10Likelihoods
+                        .bestAlleles()
+                        .stream()
+                        .filter(ba -> ba.allele.isNonReference())
+                        .map(ba -> ba.read)
+                        .collect(Collectors.toList());
+
+                final double originalAltFraction = (double) altReads.size() / log10Likelihoods.readCount();
+
+                if (originalAltFraction > 0.3) {
+                    final double fractionToDiscard = 1 - hetDownsamplingDistribution.sample();
+                    Collections.shuffle(altReads);
+                    final List<GATKRead> readsToDiscard = altReads.subList(0, (int) (altReads.size() * fractionToDiscard));
+                    log10Likelihoods.removeSampleReads(log10Likelihoods.indexOfSample(MTAC.tumorSampleName), readsToDiscard);
+                }
+
+                originalAF = OptionalDouble.of(originalAltFraction);
+            }
+
             final LikelihoodMatrix<Allele> log10TumorMatrix = log10Likelihoods.sampleMatrix(log10Likelihoods.indexOfSample(tumorSampleName));
             final Optional<LikelihoodMatrix<Allele>> log10NormalMatrix =
                     getForNormal(() -> log10Likelihoods.sampleMatrix(log10Likelihoods.indexOfSample(matchedNormalSampleName)));
@@ -154,6 +175,7 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
                     .attributes(germlineAnnotations)
                     .attribute(GATKVCFConstants.TUMOR_LOD_KEY, somaticAltAlleles.stream().mapToDouble(tumorLog10Odds::getAlt).toArray());
 
+            originalAF.ifPresent(af -> callVcb.attribute(GATKVCFConstants.ORIGINAL_AF_VCF_ATTRIBUTE, af));
             normalLog10Odds.ifPresent(values -> callVcb.attribute(GATKVCFConstants.NORMAL_LOD_KEY, values.asDoubleArray(somaticAltAlleles)));
             normalArtifactLog10Odds.ifPresent(values -> callVcb.attribute(GATKVCFConstants.NORMAL_ARTIFACT_LOD_ATTRIBUTE, values.asDoubleArray(somaticAltAlleles)));
 
@@ -162,27 +184,6 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
             }
 
             addGenotypes(subsettedLog10TumorMatrix, subsettedLog10NormalMatrix, callVcb);
-
-
-            if (MTAC.trainingMode) {
-                final List<GATKRead> altReads = log10Likelihoods
-                        .bestAlleles()
-                        .stream()
-                        .filter(ba -> ba.allele.isNonReference())
-                        .map(ba -> ba.read)
-                        .collect(Collectors.toList());
-
-                final double originalAltFraction = (double) altReads.size() / log10Likelihoods.readCount();
-
-                if (originalAltFraction > 0.3) {
-                    final double fractionToDiscard = 1 - hetDownsamplingDistribution.sample();
-                    Collections.shuffle(altReads);
-                    final List<GATKRead> readsToDiscard = altReads.subList(0, (int) (altReads.size() * fractionToDiscard));
-                    log10Likelihoods.removeSampleReads(log10Likelihoods.indexOfSample(MTAC.tumorSampleName), readsToDiscard);
-                }
-
-                callVcb.attribute(GATKVCFConstants.ORIGINAL_AF_VCF_ATTRIBUTE, originalAltFraction);
-            }
 
             final VariantContext call = callVcb.make();
             final VariantContext annotatedCall =  annotationEngine.annotateContext(call, featureContext, referenceContext, log10Likelihoods, a -> true);
