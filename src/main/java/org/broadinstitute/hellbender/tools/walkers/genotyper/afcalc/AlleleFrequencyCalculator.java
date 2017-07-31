@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.math3.util.MathArrays;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAlleleCounts;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeLikelihoodCalculator;
@@ -12,6 +13,7 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -68,8 +70,24 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         double[] log10AlleleFrequencies = new IndexRange(0, numAlleles).mapToDouble(n -> flatLog10AlleleFrequency);
         double alleleCountsMaximumDifference = Double.POSITIVE_INFINITY;
 
+        // to save time, we call effectiveAlleleCount() only on non-hom ref genotypes and add the total number of hom ref alleles
+        // without an iterative computation
+        final List<Genotype> variantGenotypes = new ArrayList<>();
+        final MutableInt numHomRefAlleles = new MutableInt(0);
+        for (final Genotype g : vc.getGenotypes()) {
+            if (!g.hasLikelihoods()) {
+                continue;
+            }
+
+            if (g.isHomRef()) {
+                numHomRefAlleles.add(g.getPloidy());
+            } else {
+                variantGenotypes.add(g);
+            }
+        }
+
         while (alleleCountsMaximumDifference > THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE) {
-            final double[] newAlleleCounts = effectiveAlleleCounts(vc, log10AlleleFrequencies);
+            final double[] newAlleleCounts = effectiveAlleleCounts(variantGenotypes, numHomRefAlleles.intValue(), log10AlleleFrequencies);
             alleleCountsMaximumDifference = Arrays.stream(MathArrays.ebeSubtract(alleleCounts, newAlleleCounts)).map(Math::abs).max().getAsDouble();
             alleleCounts = newAlleleCounts;
             final double[] posteriorPseudocounts = MathArrays.ebeAdd(priorPseudocounts, alleleCounts);
@@ -138,12 +156,11 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
     // for numerical stability we will do this in log space:
     // count = SUM 10^(log (n_g p_g)) = SUM 10^(log n_g + log p_g)
     // thanks to the log-sum-exp trick this lets us work with log posteriors alone
-    private double[] effectiveAlleleCounts(final VariantContext vc, final double[] log10AlleleFrequencies) {
-        final int numAlleles = vc.getNAlleles();
-        Utils.validateArg(numAlleles == log10AlleleFrequencies.length, "number of alleles inconsistent");
+    private double[] effectiveAlleleCounts(final List<Genotype> variantGenotypes, final int numHomRefAlleles, final double[] log10AlleleFrequencies) {
+        final int numAlleles = log10AlleleFrequencies.length;
         final double[] log10Result = new double[numAlleles];
         Arrays.fill(log10Result, Double.NEGATIVE_INFINITY);
-        for (final Genotype g : vc.getGenotypes()) {
+        for (final Genotype g : variantGenotypes) {
             if (!g.hasLikelihoods()) {
                 continue;
             }
@@ -155,7 +172,14 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
                 glCalc.genotypeAlleleCountsAt(genotypeIndex).forEachAlleleIndexAndCount((alleleIndex, count) ->
                         log10Result[alleleIndex] = MathUtils.log10SumLog10(log10Result[alleleIndex], log10GenotypePosteriors[genotypeIndex] + MathUtils.log10(count))));
         }
-        return MathUtils.applyToArrayInPlace(log10Result, x -> Math.pow(10.0, x));
+
+        // first we exponentiate to get the counts from variant genotypes
+        final double[] result = MathUtils.applyToArrayInPlace(log10Result, x -> Math.pow(10.0, x));
+
+        // next we explicitly add the contribution from hom ref alleles.  If ploidy = 2, this is twice the number of hom ref samples
+        result[0] += numHomRefAlleles;
+
+        return result;
     }
 
     private static double[] log10NormalizedGenotypePosteriors(final Genotype g, final GenotypeLikelihoodCalculator glCalc, final double[] log10AlleleFrequencies) {
