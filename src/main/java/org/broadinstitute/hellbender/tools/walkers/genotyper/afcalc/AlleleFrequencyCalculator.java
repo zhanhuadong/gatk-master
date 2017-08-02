@@ -104,6 +104,8 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         double[] log10POfZeroCountsByAllele = new double[numAlleles];
         double log10PNoVariant = 0;
 
+        // optimization: this is declared outside the loop so it doesn't have to be reallocated for every sample genotype
+        final double[] log10ProbabilityOfNonZeroAltAlleles = new double[numAlleles];
         for (final Genotype g : vc.getGenotypes()) {
             if (!g.hasLikelihoods()) {
                 continue;
@@ -119,10 +121,8 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             //the total probability
             log10PNoVariant += log10GenotypePosteriors[HOM_REF_GENOTYPE_INDEX];
 
-            // TODO: make this a buffer that isn't re-allocated every time we're in the loop
             // per allele non-log space probabilities of zero counts for this sample
             // for each allele calculate the total probability of genotypes containing at least one copy of the allele
-            final double[] log10ProbabilityOfNonZeroAltAlleles = new double[numAlleles];
             Arrays.fill(log10ProbabilityOfNonZeroAltAlleles, Double.NEGATIVE_INFINITY);
 
             for (int genotype = 0; genotype < glCalc.genotypeCount(); genotype++) {
