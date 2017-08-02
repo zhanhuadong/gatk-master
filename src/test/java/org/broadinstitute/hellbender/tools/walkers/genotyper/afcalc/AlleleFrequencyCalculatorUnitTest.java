@@ -151,7 +151,7 @@ public class AlleleFrequencyCalculatorUnitTest extends BaseTest {
                 .mapToDouble(vc -> afCalc.getLog10PNonRef(vc).getLog10LikelihoodOfAFEq0()).toArray();
 
         for (int n = 0; n < 9; n++) {
-            Assert.assertEquals(log10PRefs[n+1] - log10PRefs[n], log10PRefs[0], 0.01);
+            Assert.assertEquals(log10PRefs[n+1] - log10PRefs[n], log10PRefs[0], 0.02);
         }
     }
 
