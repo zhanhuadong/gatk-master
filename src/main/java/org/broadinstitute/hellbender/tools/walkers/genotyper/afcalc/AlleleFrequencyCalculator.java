@@ -3,9 +3,10 @@ package org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.math3.util.MathArrays;
-import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeAlleleCounts;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeLikelihoodCalculator;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypeLikelihoodCalculators;
 import org.broadinstitute.hellbender.utils.Dirichlet;
@@ -13,10 +14,7 @@ import org.broadinstitute.hellbender.utils.IndexRange;
 import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -65,18 +63,20 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         final double[] priorPseudocounts = alleles.stream()
                 .mapToDouble(a -> a.isReference() ? refPseudocount : (a.length() > 1 ? snpPseudocount : indelPseudocount)).toArray();
 
-        double[] alleleCounts = new double[numAlleles];
-        final double flatLog10AlleleFrequency = -MathUtils.log10(numAlleles); // log10(1/numAlleles)
-        double[] log10AlleleFrequencies = new IndexRange(0, numAlleles).mapToDouble(n -> flatLog10AlleleFrequency);
-        double alleleCountsMaximumDifference = Double.POSITIVE_INFINITY;
-
         // to save time, we call effectiveAlleleCount() only on non-hom ref genotypes and add the total number of hom ref alleles
         // without an iterative computation
         final List<Genotype> variantGenotypes = new ArrayList<>();
         final MutableInt numHomRefAlleles = new MutableInt(0);
+        final Set<Integer> ploidies = new IntArraySet();
+        ploidies.add(defaultPloidy);
+        int previousPloidy = defaultPloidy;
         for (final Genotype g : vc.getGenotypes()) {
             if (!g.hasLikelihoods()) {
                 continue;
+            }
+
+            if (g.getPloidy() != defaultPloidy) {
+                ploidies.add(g.getPloidy());
             }
 
             // checking the 0th PL is much faster than g.isHomRef()
@@ -89,8 +89,14 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
 
         //TODO: exploit fact that some sample genotype converge much faster than others because their PLs are obvious
         // TODO: perhaps store cumulative allele counts of converged samples
+        double[] alleleCounts = new double[numAlleles];
+        final double flatLog10AlleleFrequency = -MathUtils.log10(numAlleles); // log10(1/numAlleles)
+        double[] log10AlleleFrequencies = new IndexRange(0, numAlleles).mapToDouble(n -> flatLog10AlleleFrequency);
+        double alleleCountsMaximumDifference = Double.POSITIVE_INFINITY;
+        Map<Integer, double[]> log10GenotypePriorsByPloidy;
         while (alleleCountsMaximumDifference > THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE) {
-            final double[] newAlleleCounts = effectiveAlleleCounts(variantGenotypes, numHomRefAlleles.intValue(), log10AlleleFrequencies);
+            log10GenotypePriorsByPloidy = calculateLog10GenotypePriorsByPloidy(numAlleles, ploidies, log10AlleleFrequencies);
+            final double[] newAlleleCounts = effectiveAlleleCounts(numAlleles, variantGenotypes, numHomRefAlleles.intValue(), log10GenotypePriorsByPloidy);
             alleleCountsMaximumDifference = Arrays.stream(MathArrays.ebeSubtract(alleleCounts, newAlleleCounts)).map(Math::abs).max().getAsDouble();
             alleleCounts = newAlleleCounts;
             final double[] posteriorPseudocounts = MathArrays.ebeAdd(priorPseudocounts, alleleCounts);
@@ -106,6 +112,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
 
         // optimization: this is declared outside the loop so it doesn't have to be reallocated for every sample genotype
         final double[] log10ProbabilityOfNonZeroAltAlleles = new double[numAlleles];
+
         for (final Genotype g : vc.getGenotypes()) {
             if (!g.hasLikelihoods()) {
                 continue;
@@ -113,10 +120,9 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
 
             // TODO: consider skipping low-confidence ref calls (or really, all ref calls) -- should lots of low-confidence ref really yields
             // TODO: a high-quality variant?
-            final int ploidy = g.getPloidy() == 0 ? defaultPloidy : g.getPloidy();
-            final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(ploidy, numAlleles);
 
-            final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, glCalc, log10AlleleFrequencies);
+
+            final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, log10AlleleFrequencies);
 
             //the total probability
             log10PNoVariant += log10GenotypePosteriors[HOM_REF_GENOTYPE_INDEX];
@@ -125,6 +131,8 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             // for each allele calculate the total probability of genotypes containing at least one copy of the allele
             Arrays.fill(log10ProbabilityOfNonZeroAltAlleles, Double.NEGATIVE_INFINITY);
 
+            final int ploidy = g.getPloidy() == 0 ? defaultPloidy : g.getPloidy();
+            final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(ploidy, numAlleles);
             for (int genotype = 0; genotype < glCalc.genotypeCount(); genotype++) {
                 final double log10GenotypePosterior = log10GenotypePosteriors[genotype];
                 glCalc.genotypeAlleleCountsAt(genotype).forEachAlleleIndexAndCount((alleleIndex, count) ->
@@ -163,8 +171,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
     // for numerical stability we will do this in log space:
     // count = SUM 10^(log (n_g p_g)) = SUM 10^(log n_g + log p_g)
     // thanks to the log-sum-exp trick this lets us work with log posteriors alone
-    private double[] effectiveAlleleCounts(final List<Genotype> variantGenotypes, final int numHomRefAlleles, final double[] log10AlleleFrequencies) {
-        final int numAlleles = log10AlleleFrequencies.length;
+    private double[] effectiveAlleleCounts(final int numAlleles, final List<Genotype> variantGenotypes, final int numHomRefAlleles, final Map<Integer, double[]> log10GenotypePriorsByPloidy) {
         final double[] log10Result = new double[numAlleles];
         Arrays.fill(log10Result, Double.NEGATIVE_INFINITY);
         for (final Genotype g : variantGenotypes) {
@@ -172,10 +179,11 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
                 continue;
             }
             //TODO: shortcut if one or two genotypes have overwhelming PLs?
+            final double[] log10GenotypePriors = log10GenotypePriorsByPloidy.get(g.getPloidy());
+
+            final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, log10GenotypePriors);
+
             final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(g.getPloidy(), numAlleles);
-
-            final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, glCalc, log10AlleleFrequencies);
-
             new IndexRange(0, glCalc.genotypeCount()).forEach(genotypeIndex ->
                 glCalc.genotypeAlleleCountsAt(genotypeIndex).forEachAlleleIndexAndCount((alleleIndex, count) ->
                         log10Result[alleleIndex] = MathUtils.log10SumLog10(log10Result[alleleIndex], log10GenotypePosteriors[genotypeIndex] + MathUtils.log10(count))));
@@ -190,17 +198,29 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         return result;
     }
 
-    private static double[] log10NormalizedGenotypePosteriors(final Genotype g, final GenotypeLikelihoodCalculator glCalc, final double[] log10AlleleFrequencies) {
+    private static double[] log10NormalizedGenotypePosteriors(final Genotype g, final double[] log10GenotypePriors) {
         final double[] log10Likelihoods = g.getLikelihoods().getAsVector();
-        final double[] log10Posteriors = new IndexRange(0, glCalc.genotypeCount()).mapToDouble(genotypeIndex -> {
-            final GenotypeAlleleCounts gac = glCalc.genotypeAlleleCountsAt(genotypeIndex);
+        final double[] log10UnnormalizedPosteriors = MathArrays.ebeAdd(log10Likelihoods, log10GenotypePriors);
+        return MathUtils.normalizeLog10(log10UnnormalizedPosteriors);
+    }
 
-            //TODO: the gac.log10CombinationCount + gas.sumOverAlleleIndicesAndCounts. . . terms don't depend on the
-            // TODO: genotype and thus should be calculated ahead of time outside this method
-            return gac.log10CombinationCount() + log10Likelihoods[genotypeIndex]
-                    + gac.sumOverAlleleIndicesAndCounts((index, count) -> count * log10AlleleFrequencies[index]);
-        });
-        return MathUtils.normalizeLog10(log10Posteriors);
+    // for each possible genotype, form the prior given by the product (sum in log space) of:
+    // 1) the combinatorial factor = the number of phased genotypes belonging to this unphased genotype
+    // 2) the allele frequencies of each allele comprising the genotype, eg.
+    // f(A)^2 for an AA genotype, f(A)*f(B) for an AB genotype, where f(A,B) are the allele frequencies
+    private static double[] log10GenotypePriors(final GenotypeLikelihoodCalculator glCalc, final double[] log10AlleleFrequencies) {
+        return IntStream.range(0, glCalc.genotypeCount())
+                .mapToObj(glCalc::genotypeAlleleCountsAt)
+                .mapToDouble(gac -> gac.log10CombinationCount() + gac.sumOverAlleleIndicesAndCounts((index, count) -> count * log10AlleleFrequencies[index]))
+                .toArray();
+    }
+
+    private Map<Integer, double[]> calculateLog10GenotypePriorsByPloidy(int numAlleles, Collection<Integer> ploidies, double[] log10AlleleFrequencies) {
+        final Map<Integer, double[]> log10GenotypePriorsByPloidy = new Int2ObjectArrayMap<>();
+        for (final int ploidy : ploidies) {
+            log10GenotypePriorsByPloidy.put(ploidy, log10GenotypePriors(GL_CALCS.getInstance(ploidy, numAlleles), log10AlleleFrequencies));
+        }
+        return log10GenotypePriorsByPloidy;
     }
 
     @Override   //Note: unused
