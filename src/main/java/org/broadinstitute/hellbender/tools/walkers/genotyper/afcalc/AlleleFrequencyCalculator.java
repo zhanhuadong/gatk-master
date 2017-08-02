@@ -86,6 +86,8 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             }
         }
 
+        //TODO: exploit fact that some sample genotype converge much faster than others because their PLs are obvious
+        // TODO: perhaps store cumulative allele counts of converged samples
         while (alleleCountsMaximumDifference > THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE) {
             final double[] newAlleleCounts = effectiveAlleleCounts(variantGenotypes, numHomRefAlleles.intValue(), log10AlleleFrequencies);
             alleleCountsMaximumDifference = Arrays.stream(MathArrays.ebeSubtract(alleleCounts, newAlleleCounts)).map(Math::abs).max().getAsDouble();
@@ -105,6 +107,9 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             if (!g.hasLikelihoods()) {
                 continue;
             }
+
+            // TODO: consider skipping low-confidence ref calls (or really, all ref calls) -- should lots of low-confidence ref really yields
+            // TODO: a high-quality variant?
             final int ploidy = g.getPloidy() == 0 ? defaultPloidy : g.getPloidy();
             final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(ploidy, numAlleles);
 
@@ -113,6 +118,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             //the total probability
             log10PNoVariant += log10GenotypePosteriors[HOM_REF_GENOTYPE_INDEX];
 
+            // TODO: make this a buffer that isn't re-allocated every time we're in the loop
             // per allele non-log space probabilities of zero counts for this sample
             // for each allele calculate the total probability of genotypes containing at least one copy of the allele
             final double[] log10ProbabilityOfNonZeroAltAlleles = new double[numAlleles];
@@ -164,6 +170,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             if (!g.hasLikelihoods()) {
                 continue;
             }
+            //TODO: shortcut if one or two genotypes have overwhelming PLs?
             final GenotypeLikelihoodCalculator glCalc = GL_CALCS.getInstance(g.getPloidy(), numAlleles);
 
             final double[] log10GenotypePosteriors = log10NormalizedGenotypePosteriors(g, glCalc, log10AlleleFrequencies);
@@ -186,6 +193,9 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         final double[] log10Likelihoods = g.getLikelihoods().getAsVector();
         final double[] log10Posteriors = new IndexRange(0, glCalc.genotypeCount()).mapToDouble(genotypeIndex -> {
             final GenotypeAlleleCounts gac = glCalc.genotypeAlleleCountsAt(genotypeIndex);
+
+            //TODO: the gac.log10CombinationCount + gas.sumOverAlleleIndicesAndCounts. . . terms don't depend on the
+            // TODO: genotype and thus should be calculated ahead of time outside this method
             return gac.log10CombinationCount() + log10Likelihoods[genotypeIndex]
                     + gac.sumOverAlleleIndicesAndCounts((index, count) -> count * log10AlleleFrequencies[index]);
         });
