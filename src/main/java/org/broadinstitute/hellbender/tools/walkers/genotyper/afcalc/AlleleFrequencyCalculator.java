@@ -87,7 +87,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             }
         }
 
-        //TODO: exploit fact that some sample genotype converge much faster than others because their PLs are obvious
+        // TODO: exploit fact that some sample genotype converge much faster than others because their PLs are obvious
         // TODO: perhaps store cumulative allele counts of converged samples
         double[] alleleCounts = new double[numAlleles];
         final double flatLog10AlleleFrequency = -MathUtils.log10(numAlleles); // log10(1/numAlleles)
