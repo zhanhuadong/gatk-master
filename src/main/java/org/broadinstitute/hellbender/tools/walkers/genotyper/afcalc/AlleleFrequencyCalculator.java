@@ -93,9 +93,8 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
         final double flatLog10AlleleFrequency = -MathUtils.log10(numAlleles); // log10(1/numAlleles)
         double[] log10AlleleFrequencies = new IndexRange(0, numAlleles).mapToDouble(n -> flatLog10AlleleFrequency);
         double alleleCountsMaximumDifference = Double.POSITIVE_INFINITY;
-        Map<Integer, double[]> log10GenotypePriorsByPloidy = null;
+        Map<Integer, double[]> log10GenotypePriorsByPloidy = calculateLog10GenotypePriorsByPloidy(numAlleles, ploidies, log10AlleleFrequencies);
         while (alleleCountsMaximumDifference > THRESHOLD_FOR_ALLELE_COUNT_CONVERGENCE) {
-            log10GenotypePriorsByPloidy = calculateLog10GenotypePriorsByPloidy(numAlleles, ploidies, log10AlleleFrequencies);
             final double[] newAlleleCounts = effectiveAlleleCounts(numAlleles, variantGenotypes, numHomRefAlleles.intValue(), log10GenotypePriorsByPloidy);
             alleleCountsMaximumDifference = Arrays.stream(MathArrays.ebeSubtract(alleleCounts, newAlleleCounts)).map(Math::abs).max().getAsDouble();
             alleleCounts = newAlleleCounts;
@@ -105,6 +104,7 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
             // effective allele frequency that it overwhelms the genotype likelihood of a real variant
             // basically, we want a chance to get non-zero pseudocounts before using a prior that's biased against a variant
             log10AlleleFrequencies = new Dirichlet(posteriorPseudocounts).log10MeanWeights();
+            log10GenotypePriorsByPloidy = calculateLog10GenotypePriorsByPloidy(numAlleles, ploidies, log10AlleleFrequencies);
         }
 
         double[] log10POfZeroCountsByAllele = new double[numAlleles];
