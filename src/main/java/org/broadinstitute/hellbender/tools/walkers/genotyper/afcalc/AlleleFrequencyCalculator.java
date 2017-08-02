@@ -79,7 +79,8 @@ public final class AlleleFrequencyCalculator extends AFCalculator {
                 continue;
             }
 
-            if (g.isHomRef()) {
+            // checking the 0th PL is much faster than g.isHomRef()
+            if (g.getPL()[0] == 0) {
                 numHomRefAlleles.add(g.getPloidy());
             } else {
                 variantGenotypes.add(g);
