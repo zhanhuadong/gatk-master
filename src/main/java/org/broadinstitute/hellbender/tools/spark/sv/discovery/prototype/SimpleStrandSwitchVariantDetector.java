@@ -355,8 +355,8 @@ final class SimpleStrandSwitchVariantDetector implements VariantDetectorFromLoca
                 .flatMapToPair(SimpleStrandSwitchVariantDetector::inferInvDupRange)
                 .map(noveltyTypeAndAltSeqAndEvidence ->
                         DiscoverVariantsFromContigAlignmentsSAMSpark
-                                .annotateVariant(noveltyTypeAndAltSeqAndEvidence._1._1(), noveltyTypeAndAltSeqAndEvidence._1._2(),
-                                        noveltyTypeAndAltSeqAndEvidence._1._3(), noveltyTypeAndAltSeqAndEvidence._2, broadcastReference));
+                                .annotateVariant(noveltyTypeAndAltSeqAndEvidence._1._1(), noveltyTypeAndAltSeqAndEvidence._1._3(), noveltyTypeAndAltSeqAndEvidence._1._2(),
+                                        noveltyTypeAndAltSeqAndEvidence._2, broadcastReference));
     }
 
     private static Iterator<Tuple2<Tuple3<NovelAdjacencyReferenceLocations, SimpleSVType.DuplicationInverted, byte[]>, List<ChimericAlignment>>>

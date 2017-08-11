@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 
 import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection.DEFAULT_MIN_ALIGNMENT_LENGTH;
 import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection.GAPPED_ALIGNMENT_BREAK_DEFAULT_SENSITIVITY;
+import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection;
 
 
 /**
@@ -174,7 +175,7 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
      * turn into annotated {@link VariantContext}'s, and writes them to VCF.
      */
     public static void discoverVariantsAndWriteVCF(final JavaRDD<AlignedContig> alignedContigs,
-                                                   final StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection parameters,
+                                                   final DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection parameters,
                                                    final Broadcast<ReferenceMultiSource> broadcastReference,
                                                    final String vcfOutputFileName,
                                                    final Logger localLogger,
@@ -184,7 +185,7 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
     }
 
     public static void discoverVariantsAndWriteVCF(final JavaRDD<AlignedContig> alignedContigs,
-                                                   final StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection parameters,
+                                                   final DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection parameters,
                                                    final Broadcast<ReferenceMultiSource> broadcastReference,
                                                    final String vcfOutputFileName, final Logger localLogger,
                                                    final PairedStrandedIntervalTree<EvidenceTargetLink> evidenceTargetLinks,
@@ -204,8 +205,8 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
                         .map(noveltyTypeAndEvidence ->
                                 annotateVariant(                                                                                      // annotate the novel adjacency and inferred type
                                         noveltyTypeAndEvidence._1,
-                                        noveltyTypeAndEvidence._2._1,
                                         null,
+                                        noveltyTypeAndEvidence._2._1,
                                         noveltyTypeAndEvidence._2._2,
                                         broadcastReference));
 
@@ -228,7 +229,7 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
      * a given threshold.
      */
     @VisibleForTesting
-    static List<VariantContext> processEvidenceTargetLinks(final StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection parameters,
+    static List<VariantContext> processEvidenceTargetLinks(final DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection parameters,
                                                            final Logger localLogger,
                                                            final PairedStrandedIntervalTree<EvidenceTargetLink> evidenceTargetLinks,
                                                            final ReadMetadata metadata,
@@ -293,8 +294,7 @@ public final class DiscoverVariantsFromContigAlignmentsSAMSpark extends GATKSpar
      * Produces annotated variant as described in {@link GATKSVVCFHeaderLines}, given input arguments.
      */
     public static VariantContext annotateVariant(final NovelAdjacencyReferenceLocations novelAdjacency,
-                                                 final SvType inferredType,
-                                                 final byte[] altHaplotypeSeq,
+                                                 final byte[] altHaplotypeSeq, final SvType inferredType,
                                                  final Iterable<ChimericAlignment> chimericAlignments,
                                                  final Broadcast<ReferenceMultiSource> broadcastReference)
             throws IOException {

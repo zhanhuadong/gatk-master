@@ -128,10 +128,10 @@ public class StructuralVariationDiscoveryPipelineSpark extends GATKSparkTool {
         private final Logger toolLogger;
 
 
-        InMemoryAlignmentParser(final JavaSparkContext ctx,
-                                final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList,
-                                final SAMFileHeader header,
-                                final Logger toolLogger) {
+        public InMemoryAlignmentParser(final JavaSparkContext ctx,
+                                       final List<AlignedAssemblyOrExcuse> alignedAssemblyOrExcuseList,
+                                       final SAMFileHeader header,
+                                       final Logger toolLogger) {
             this.ctx = ctx;
             this.alignedAssemblyOrExcuseList = alignedAssemblyOrExcuseList;
             this.header = header;
