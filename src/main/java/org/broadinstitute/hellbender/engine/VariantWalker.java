@@ -7,7 +7,6 @@ import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 
-import java.nio.file.Path;
 import java.util.Spliterator;
 
 /**
@@ -51,8 +50,8 @@ public abstract class VariantWalker extends VariantWalkerBase {
     protected void initializeDrivingVariants() {
         drivingVariantsFeatureInput = new FeatureInput<>(drivingVariantFile, "drivingVariantFile");
 
-        //This is the data source for the driving source of variants, which uses a cache lookahead of FEATURE_CACHE_LOOKAHEAD
-        drivingVariants = new FeatureDataSource<>(drivingVariantsFeatureInput, FEATURE_CACHE_LOOKAHEAD, VariantContext.class, cloudPrefetchBuffer, cloudIndexPrefetchBuffer,
+        //This is the data source for the driving source of variants, which uses a cache lookahead of DEFAULT_FEATURE_CACHE_LOOKAHEAD
+        drivingVariants = new FeatureDataSource<>(drivingVariantsFeatureInput, getVariantCacheLookAheadBases(), VariantContext.class, cloudPrefetchBuffer, cloudIndexPrefetchBuffer,
                                                   referenceArguments.getReferencePath());
 
         //Add the driving datasource to the feature manager too so that it can be queried. Setting lookahead to 0 to avoid caching.

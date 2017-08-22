@@ -9,7 +9,6 @@ import org.broadinstitute.hellbender.engine.filters.VariantFilterLibrary;
 import org.broadinstitute.hellbender.utils.IndexUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 
-import java.nio.file.Path;
 import java.util.Spliterator;
 import java.util.stream.StreamSupport;
 
@@ -26,10 +25,10 @@ import java.util.stream.StreamSupport;
 public abstract class VariantWalkerBase extends GATKTool {
 
     /**
-     * This number controls the size of the cache for our primary and auxiliary FeatureInputs
+     * Default value to control the size of the cache for our primary FeatureInputs
      * (specifically, the number of additional bases worth of overlapping records to cache when querying feature sources).
      */
-    public static final int FEATURE_CACHE_LOOKAHEAD = 100_000;
+    public static final int DEFAULT_FEATURE_CACHE_LOOKAHEAD = 100_000;
 
     @Override
     public boolean requiresFeatures() { return true; }
@@ -42,7 +41,7 @@ public abstract class VariantWalkerBase extends GATKTool {
 
         //Note: we override this method because we don't want to set feature manager to null if there are no FeatureInputs.
         //This is because we have at least 1 source of features (namely the driving dataset).
-        features = new FeatureManager(this, FEATURE_CACHE_LOOKAHEAD, cloudPrefetchBuffer, cloudIndexPrefetchBuffer,
+        features = new FeatureManager(this, FeatureDataSource.DEFAULT_QUERY_LOOKAHEAD_BASES, cloudPrefetchBuffer, cloudIndexPrefetchBuffer,
                                       referenceArguments.getReferencePath());
         initializeDrivingVariants();
     }
@@ -93,6 +92,15 @@ public abstract class VariantWalkerBase extends GATKTool {
      * Return a spliterator to be used to iterate over the elements of the driving variants.
      */
     protected abstract Spliterator<VariantContext> getSpliteratorForDrivingVariants();
+
+    /**
+     * When performing a query on the primary variant input how many overlapping records should be cached when querying.
+     * Subclasses can set this value by overriding this method.
+     * @return the number of bases ahead of a query to prefetch
+     */
+    protected int getVariantCacheLookAheadBases(){
+        return DEFAULT_FEATURE_CACHE_LOOKAHEAD;
+    }
 
     /**
      * Implementation of variant-based traversal.
