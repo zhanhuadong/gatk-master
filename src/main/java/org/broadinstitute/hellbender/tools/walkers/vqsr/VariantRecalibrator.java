@@ -393,6 +393,7 @@ public class VariantRecalibrator extends MultiVariantWalker {
     private GATKReportTable pmmTable;
     private GATKReportTable pPMixTable;
     private int numAnnotations;
+    private List<Integer> annotationOrder = null;
     private RScriptExecutor rScriptExecutor;
 
     //---------------------------------------------------------------------------------------------------------------
@@ -452,11 +453,9 @@ public class VariantRecalibrator extends MultiVariantWalker {
             pPMixTable = reportIn.getTable("GoodGaussianPMix");
             final GATKReportTable anMeansTable = reportIn.getTable("AnnotationMeans");
             final GATKReportTable anStDevsTable = reportIn.getTable("AnnotationStdevs");
-            numAnnotations = dataManager.annotationKeys.size();
 
-            if ( numAnnotations != pmmTable.getNumColumns()-1 || numAnnotations != nmmTable.getNumColumns()-1 ) { // -1 because the first column is the gaussian number.
-                throw new CommandLineException( "Annotations specified on the command line do not match annotations in the model report." );
-            }
+            orderAndValidateAnnotations(anMeansTable);
+            numAnnotations = annotationOrder.size();
 
             final Map<String, Double> anMeans = getMapFromVectorTable(anMeansTable);
             final Map<String, Double> anStdDevs = getMapFromVectorTable(anStDevsTable);
@@ -485,6 +484,25 @@ public class VariantRecalibrator extends MultiVariantWalker {
         for ( int iii = 0; iii < REPLICATE * 2; iii++ ) {
             replicate.add(Utils.getRandomGenerator().nextDouble());
         }
+    }
+
+
+    private void orderAndValidateAnnotations(final GATKReportTable annotationTable){
+        annotationOrder = new ArrayList<Integer>(dataManager.annotationKeys.size());
+
+        for (int i = 0; i < annotationTable.getNumRows(); i++){
+            String serialAnno = (String)annotationTable.get(i, "Annotation");
+            for (int j = 0; j < dataManager.annotationKeys.size(); j++) {
+                if (serialAnno.equals( dataManager.annotationKeys.get(j))){
+                    annotationOrder.add(j);
+                }
+            }
+        }
+
+        if(annotationOrder.size() != annotationTable.getNumRows() || annotationOrder.size() != dataManager.annotationKeys.size()) {
+            throw new CommandLineException( "Annotations specified on the command line do not match annotations in the model report." );
+        }
+
     }
 
     //---------------------------------------------------------------------------------------------------------------
@@ -612,7 +630,7 @@ public class VariantRecalibrator extends MultiVariantWalker {
         for (int i = 1; i <= max_attempts; i++) {
             try {
                 dataManager.setData(reduceSum);
-                dataManager.normalizeData(inputModel == null); // Each data point is now (x - mean) / standard deviation
+                dataManager.normalizeData(inputModel == null, annotationOrder); // Each data point is now (x - mean) / standard deviation
 
                 final GaussianMixtureModel goodModel;
                 final GaussianMixtureModel badModel;
