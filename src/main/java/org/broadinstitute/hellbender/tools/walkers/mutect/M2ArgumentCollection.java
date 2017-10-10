@@ -7,12 +7,16 @@ import org.broadinstitute.hellbender.cmdline.argumentcollections.VariantAnnotati
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.AssemblyBasedCallerArgumentCollection;
+import org.broadinstitute.hellbender.utils.realignmentfilter.RealignmentFilterArgumentCollection;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 public class M2ArgumentCollection extends AssemblyBasedCallerArgumentCollection {
     private static final long serialVersionUID = 9341L;
+
+    @ArgumentCollection
+    public RealignmentFilterArgumentCollection realignmentFilterArgumentCollection = new RealignmentFilterArgumentCollection();
 
     //TODO: HACK ALERT HACK ALERT HACK ALERT
     //TODO: GATK4 does not yet have a way to tag inputs, eg -I:tumor tumor.bam -I:normal normal.bam,

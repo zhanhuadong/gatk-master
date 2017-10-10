@@ -1,8 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.mutect;
 
 import htsjdk.samtools.SAMSequenceDictionary;
-import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
@@ -13,11 +11,8 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,7 +30,7 @@ import java.util.List;
  *
  * <dl>
  *     <dd>(i) The filtering functionality is now a separate tool called {@link FilterMutectCalls}.
- *     To filter further based on sequence context artifacts, additionally use {@link FilterByOrientationBias}.</dd>
+ *     To filter further based on sequence context artifacts, additionally use {@link org.broadinstitute.hellbender.tools.exome.FilterByOrientationBias}.</dd>
  *     <dd>(ii) If using a known germline variants resource, then it must contain population allele frequencies, e.g.
  *     from gnomAD or the 1000 Genomes Project. The VCF INFO field contains the allele frequency (AF) tag.
  *     See below or the GATK Resource Bundle for an example.</dd>
@@ -45,8 +40,8 @@ import java.util.List;
  *     <dd>(iv) Instead of using a maximum likelihood estimate, GATK4 Mutect2 marginalizes over allele fractions. 
  *     GATK3 MuTect2 directly uses allele depths (AD) to estimate allele fractions and calculate likelihoods. In contrast, GATK4 Mutect2
  *     factors for the statistical error inherent in allele depths by marginalizing over allele fractions when calculating likelihoods.</dd>
- *     <dd>(v) GATK4 Mutect2 recommends including contamination estimates with the -contaminationFile option from {@link CalculateContamination}, 
- *     which in turn relies on the results of {@link GetPileupSummaries}.</dd>
+ *     <dd>(v) GATK4 Mutect2 recommends including contamination estimates with the -contaminationFile option from {@link org.broadinstitute.hellbender.tools.walkers.contamination.CalculateContamination},
+ *     which in turn relies on the results of {@link org.broadinstitute.hellbender.tools.walkers.contamination.GetPileupSummaries}.</dd>
  * </dl>
  *
  * <p>
@@ -225,14 +220,14 @@ public final class Mutect2 extends AssemblyRegionWalker {
     }
 
     @Override
-    public AssemblyRegionEvaluator assemblyRegionEvaluator() { return m2Engine; }
+    public AssemblyRegionEvaluator assemblyRegionEvaluator() { return m2Engine.getActiveRegionEngine(); }
 
     @Override
     public void onTraversalStart() {
         m2Engine = new Mutect2Engine(MTAC, createOutputBamIndex, createOutputBamMD5, getHeaderForReads(), referenceArguments.getReferenceFileName());
         final SAMSequenceDictionary sequenceDictionary = getHeaderForReads().getSequenceDictionary();
         vcfWriter = createVCFWriter(outputVCF);
-        m2Engine.writeHeader(vcfWriter, sequenceDictionary, getDefaultToolVCFHeaderLines());
+        m2Engine.writeHeader(vcfWriter, getDefaultToolVCFHeaderLines());
     }
 
     @Override

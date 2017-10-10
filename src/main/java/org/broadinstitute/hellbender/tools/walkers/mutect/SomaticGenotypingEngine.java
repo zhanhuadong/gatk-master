@@ -9,7 +9,6 @@ import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.DefaultRealMatrixChangingVisitor;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.util.FastMath;
-import org.apache.log4j.Logger;
 import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.afcalc.AFCalculator;
@@ -24,6 +23,7 @@ import org.broadinstitute.hellbender.utils.genotyper.SampleList;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
+import org.broadinstitute.hellbender.utils.realignmentfilter.Realigner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 
 import java.util.*;
@@ -40,9 +40,9 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
 
     private final M2ArgumentCollection MTAC;
 
-    public final String tumorSampleName;
-    private final String matchedNormalSampleName;
-    final boolean hasNormal;
+    private final String tumorSampleName;
+    private final String normalSampleName;
+    private final boolean hasNormal;
 
     //Mutect2 does not run in GGA mode
     private static final List<VariantContext> NO_GIVEN_ALLELES = Collections.emptyList();
@@ -53,22 +53,17 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
         public AFCalculator getInstance(final int ploidy, final int maximumAltAlleles) { return null; }
     };
 
-    private static final Logger logger = Logger.getLogger(SomaticGenotypingEngine.class);
-
     @Override
     protected String callSourceString() {
         return "M2_call";
     }
 
-    public SomaticGenotypingEngine(final SampleList samples,
-                                   final M2ArgumentCollection MTAC,
-                                   final String tumorSampleName,
-                                   final String matchedNormalSampleName) {
+    public SomaticGenotypingEngine(final SampleList samples, final M2ArgumentCollection MTAC) {
         super(MTAC, samples, DUMMY_AF_CALCULATOR_PROVIDER, !MTAC.doNotRunPhysicalPhasing);
         this.MTAC = MTAC;
-        this.tumorSampleName = tumorSampleName;
-        this.matchedNormalSampleName = matchedNormalSampleName;
-        hasNormal = matchedNormalSampleName != null;
+        this.tumorSampleName = MTAC.tumorSampleName;
+        this.normalSampleName = MTAC.normalSampleName;
+        hasNormal = MTAC.normalSampleName != null;
     }
 
     /**
@@ -119,7 +114,7 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
 
             final LikelihoodMatrix<Allele> log10TumorMatrix = log10Likelihoods.sampleMatrix(log10Likelihoods.indexOfSample(tumorSampleName));
             final Optional<LikelihoodMatrix<Allele>> log10NormalMatrix =
-                    getForNormal(() -> log10Likelihoods.sampleMatrix(log10Likelihoods.indexOfSample(matchedNormalSampleName)));
+                    getForNormal(() -> log10Likelihoods.sampleMatrix(log10Likelihoods.indexOfSample(normalSampleName)));
 
             final PerAlleleCollection<Double> tumorLog10Odds = somaticLog10Odds(log10TumorMatrix);
             final Optional<PerAlleleCollection<Double>> normalLog10Odds = getForNormal(() -> diploidAltLog10Odds(log10NormalMatrix.get()));
@@ -203,7 +198,7 @@ public class SomaticGenotypingEngine extends AssemblyBasedCallerGenotypingEngine
         // if we are calling with a normal, build the genotype for the sample to appear in vcf
         if (hasNormal) {
             final double[] normalAlleleCounts = SomaticLikelihoodsEngine.getEffectiveCounts(getAsRealMatrix(normalLog10Matrix.get()));
-            final Genotype normalGenotype = new GenotypeBuilder(matchedNormalSampleName, homRefAllelesforNormalGenotype)
+            final Genotype normalGenotype = new GenotypeBuilder(normalSampleName, homRefAllelesforNormalGenotype)
                     .AD(Arrays.stream(normalAlleleCounts).mapToInt(x -> (int) FastMath.round(x)).toArray())
                     .attribute(GATKVCFConstants.ALLELE_FRACTION_KEY, getAltAlleleFractions(normalAlleleCounts))
                     .make();
