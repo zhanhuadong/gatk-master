@@ -3,6 +3,8 @@ package org.broadinstitute.hellbender.tools.spark.sv.prototype;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.variant.variantcontext.VariantContext;
+import org.apache.commons.collections.iterators.EmptyListIterator;
+import org.apache.commons.collections.iterators.SingletonListIterator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
@@ -18,9 +20,11 @@ import org.broadinstitute.hellbender.engine.datasources.ReferenceMultiSource;
 import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
 import org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection;
 import org.broadinstitute.hellbender.tools.spark.sv.discovery.*;
+import org.broadinstitute.hellbender.tools.spark.sv.discovery.prototype.SvDiscoverFromLocalAssemblyContigAlignmentsSpark;
 import org.broadinstitute.hellbender.tools.spark.sv.evidence.AlignedAssemblyOrExcuse;
 import org.broadinstitute.hellbender.tools.spark.sv.evidence.FindBreakpointEvidenceSpark;
 import org.broadinstitute.hellbender.tools.spark.sv.utils.SVVCFWriter;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.SAMRecordToGATKReadAdapter;
 import scala.Tuple2;
@@ -28,6 +32,8 @@ import scala.Tuple2;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.broadinstitute.hellbender.tools.spark.sv.StructuralVariationDiscoveryArgumentCollection.DiscoverVariantsFromContigsAlignmentsSparkArgumentCollection.DEFAULT_MIN_ALIGNMENT_LENGTH;
 
 /**
  * Tool to run the sv pipeline up for possible pathogen integration site detection and assembled contigs with low alignment coverage.
@@ -133,12 +139,41 @@ public class DetectPossiblePathogenIntegraionBkptPipelineSpark extends GATKSpark
                                         noveltyTypeAndEvidence._2._1,
                                         noveltyTypeAndEvidence._2._2,
                                         broadcastReference));
+        // as a intermediate tool, add annotation in output VCF for the number of alignments that evidence contigs have and signature (needs enum)
 
         SVVCFWriter.writeVCF(annotatedVariants.collect(), vcfOutputFileName, referenceSequenceDictionary, localLogger);
     }
 
-    private static Iterator<Tuple2<NovelAdjacencyReferenceLocations, Tuple2<SvType, Iterable<ChimericAlignment>>>> turnToNARL(final AlignedContig alignedContig) {
+    // TODO: 10/11/17 add a function to extract signature of source contigs alignment signature
+    @SuppressWarnings("unchecked")
+    private static Iterator<Tuple2<NovelAdjacencyReferenceLocations, Tuple2<SvType, Iterable<ChimericAlignment>>>> turnToNARL(final AlignedContig contig) {
+
+        // for a contig, depending on if it has:
+        // one: head and tail clipping leads to BND records with "inserted sequence" in ALT field
+        // two: BND records {chr BND, SS BND, OrderSwitch BND--look for inserted sequence,
+        // two: DEL records--must be large substitution
+        // 2+ & and ambiguous configuration: only output alignments
+
+        if (contig.hasEquallyGoodAlnConfigurations || SvDiscoverFromLocalAssemblyContigAlignmentsSpark.hasOnly2Alignments(contig)) {
+            return EmptyListIterator.INSTANCE;
+        }
+        final List<Tuple2<NovelAdjacencyReferenceLocations, Tuple2<SvType, Iterable<ChimericAlignment>>>> result;
+        if (contig.alignmentIntervals.size() == 1) {
+
+        } else {
+            if ( SvDiscoverFromLocalAssemblyContigAlignmentsSpark.isSameChromosomeMapping(contig) ) { // same chr
+                if (SvDiscoverFromLocalAssemblyContigAlignmentsSpark.isLikelyInvBreakpointOrInsInv(contig)) { // SS
+
+                } else if (SvDiscoverFromLocalAssemblyContigAlignmentsSpark.isSuggestingRefBlockOrderSwitch(contig)){ // OS
+
+                } else { // ins del
+                    return new SingletonListIterator(new Tuple2<>(contig.contigSequence, ChimericAlignment.parseOneContig(contig, DEFAULT_MIN_ALIGNMENT_LENGTH)));
+                }
+            } else { // diff chr
+
+            }
+        }
+
         return null;
-//        return new Tuple2<>(alignedContig.contigSequence, ChimericAlignment.parseOneContig(alignedContig, DEFAULT_MIN_ALIGNMENT_LENGTH));
     }
 }

@@ -123,11 +123,11 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
         Ambiguous, Inv, InsDel, DispersedDupOrMEI, Cpx;
     }
 
-    private static boolean hasOnly2Alignments(final AlignedContig contigWithOnlyOneConfig) {
+    public static boolean hasOnly2Alignments(final AlignedContig contigWithOnlyOneConfig) {
         return contigWithOnlyOneConfig.alignmentIntervals.size() == 2;
     }
 
-    private static boolean isSameChromosomeMapping(final AlignedContig contigWithOnlyOneConfigAnd2Aln) {
+    public static boolean isSameChromosomeMapping(final AlignedContig contigWithOnlyOneConfigAnd2Aln) {
         Utils.validateArg(hasOnly2Alignments(contigWithOnlyOneConfigAnd2Aln),
                 "assumption that input contig has only 2 alignments is violated. \n" +
                         onErrorStringRepForAlignedContig(contigWithOnlyOneConfigAnd2Aln));
@@ -135,7 +135,7 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
                 .equals(contigWithOnlyOneConfigAnd2Aln.alignmentIntervals.get(1).referenceSpan.getContig());
     }
 
-    static boolean isLikelyInvBreakpointOrInsInv(final AlignedContig contigWithOnlyOneConfigAnd2AlnToSameChr) {
+    public static boolean isLikelyInvBreakpointOrInsInv(final AlignedContig contigWithOnlyOneConfigAnd2AlnToSameChr) {
         Utils.validateArg(isSameChromosomeMapping(contigWithOnlyOneConfigAnd2AlnToSameChr),
                 "assumption that input contig's 2 alignments map to the same chr is violated. \n" +
                         onErrorStringRepForAlignedContig(contigWithOnlyOneConfigAnd2AlnToSameChr));
@@ -144,7 +144,7 @@ public final class SvDiscoverFromLocalAssemblyContigAlignmentsSpark extends GATK
                 contigWithOnlyOneConfigAnd2AlnToSameChr.alignmentIntervals.get(1).forwardStrand;
     }
 
-    private static boolean isSuggestingRefBlockOrderSwitch(final AlignedContig contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch) {
+    public static boolean isSuggestingRefBlockOrderSwitch(final AlignedContig contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch) {
         Utils.validateArg(isSameChromosomeMapping(contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch),
                 "assumption that input contig's 2 alignments map to the same chr is violated. \n" +
                         onErrorStringRepForAlignedContig(contigWithOnlyOneConfigAnd2AlnToSameChrWithoutStrandSwitch));
