@@ -374,6 +374,9 @@ public class VariantRecalibrator extends MultiVariantWalker {
             optional=true)
     private boolean TRUST_ALL_POLYMORPHIC = false;
 
+    @VisibleForTesting
+    protected List<Integer> annotationOrder = null;
+
     /////////////////////////////
     // Private Member Variables
     /////////////////////////////
@@ -393,7 +396,6 @@ public class VariantRecalibrator extends MultiVariantWalker {
     private GATKReportTable pmmTable;
     private GATKReportTable pPMixTable;
     private int numAnnotations;
-    private List<Integer> annotationOrder = null;
     private RScriptExecutor rScriptExecutor;
 
     //---------------------------------------------------------------------------------------------------------------
@@ -454,7 +456,7 @@ public class VariantRecalibrator extends MultiVariantWalker {
             final GATKReportTable anMeansTable = reportIn.getTable("AnnotationMeans");
             final GATKReportTable anStDevsTable = reportIn.getTable("AnnotationStdevs");
 
-            orderAndValidateAnnotations(anMeansTable);
+            orderAndValidateAnnotations(anMeansTable, dataManager.annotationKeys);
             numAnnotations = annotationOrder.size();
 
             final Map<String, Double> anMeans = getMapFromVectorTable(anMeansTable);
@@ -486,20 +488,26 @@ public class VariantRecalibrator extends MultiVariantWalker {
         }
     }
 
-
-    private void orderAndValidateAnnotations(final GATKReportTable annotationTable){
-        annotationOrder = new ArrayList<Integer>(dataManager.annotationKeys.size());
+    /**
+     * Order and validate annotations according to the annotations in the serialized model
+     * Annotations on the command line must be the same as those in the model report or this will throw an exception.
+     * Sets the {@code annotationOrder} list to map from command line order to the model report's order.
+     * n^2 because we typically use 7 or less annotations.
+     * @param annotationTable GATKReportTable of annotations read from the serialized model file
+     */
+    protected void orderAndValidateAnnotations(final GATKReportTable annotationTable, final List<String> annotationKeys){
+        annotationOrder = new ArrayList<Integer>(annotationKeys.size());
 
         for (int i = 0; i < annotationTable.getNumRows(); i++){
             String serialAnno = (String)annotationTable.get(i, "Annotation");
-            for (int j = 0; j < dataManager.annotationKeys.size(); j++) {
-                if (serialAnno.equals( dataManager.annotationKeys.get(j))){
+            for (int j = 0; j < annotationKeys.size(); j++) {
+                if (serialAnno.equals( annotationKeys.get(j))){
                     annotationOrder.add(j);
                 }
             }
         }
 
-        if(annotationOrder.size() != annotationTable.getNumRows() || annotationOrder.size() != dataManager.annotationKeys.size()) {
+        if(annotationOrder.size() != annotationTable.getNumRows() || annotationOrder.size() != annotationKeys.size()) {
             throw new CommandLineException( "Annotations specified on the command line do not match annotations in the model report." );
         }
 

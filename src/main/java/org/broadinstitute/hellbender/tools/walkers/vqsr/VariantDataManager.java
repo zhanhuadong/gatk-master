@@ -56,6 +56,12 @@ public class VariantDataManager {
         return data;
     }
 
+    /**
+     * Normalize and order the variant annotations.
+     *
+     * @param calculateMeans Boolean indicating whether or not to calculate the means
+     * @param theOrder a list of integers specifying the desired annotation order
+     */
     public void normalizeData(final boolean calculateMeans, List<Integer> theOrder) {
         boolean foundZeroVarianceAnnotation = false;
         for( int iii = 0; iii < meanVector.length; iii++ ) {
