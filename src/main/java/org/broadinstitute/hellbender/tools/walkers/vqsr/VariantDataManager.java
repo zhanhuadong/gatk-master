@@ -57,10 +57,12 @@ public class VariantDataManager {
     }
 
     /**
-     * Normalize and order the variant annotations.
+     * Normalize annotations to mean 0 and standard deviation 1.
+     * Order the variant annotations by the provided list {@code theOrder} or standard deviation.
      *
      * @param calculateMeans Boolean indicating whether or not to calculate the means
-     * @param theOrder a list of integers specifying the desired annotation order
+     * @param theOrder a list of integers specifying the desired annotation order. If this is null
+     *                 annotations will get sorted in decreasing size of their standard deviations.
      */
     public void normalizeData(final boolean calculateMeans, List<Integer> theOrder) {
         boolean foundZeroVarianceAnnotation = false;
