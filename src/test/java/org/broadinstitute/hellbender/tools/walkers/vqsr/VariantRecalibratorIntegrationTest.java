@@ -268,7 +268,7 @@ public class VariantRecalibratorIntegrationTest extends CommandLineProgramTest {
                 " --variant " + inputFile +
                         " -L 1:110201699" +
                         " --resource hapmap,known=false,training=true,truth=true,prior=15:" + inputFile +
-                        " -an FS -an ReadPosRankSum -an MQ -an MQRankSum -an QD -an SOR" +
+                        " -an ReadPosRankSum -an MQ -an MQRankSum -an QD -an SOR -an FS" +
                         " --output %s" +
                         " -tranchesFile %s" +
                         " --input_model " + exacModelReportFilename +
