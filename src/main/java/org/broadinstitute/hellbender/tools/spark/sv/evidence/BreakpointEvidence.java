@@ -98,8 +98,7 @@ public class BreakpointEvidence {
                     .map(strandedInterval -> strandedInterval.getInterval().toString() + (strandedInterval.getStrand() ? "1" : "0"))
                     .collect(Collectors.joining(";"))
                 : "";
-        return location.toString() + "\t" + weight + "\t" + (validated ? "1" : "0") + "\t" + this.getClass().getSimpleName()
-                + "\t" + dtString;
+        return location.toString() + "\t" + weight + "\t" + this.getClass().getSimpleName() + "\t" + dtString;
     }
 
     //* slicing equality -- just tests for equal fields */
