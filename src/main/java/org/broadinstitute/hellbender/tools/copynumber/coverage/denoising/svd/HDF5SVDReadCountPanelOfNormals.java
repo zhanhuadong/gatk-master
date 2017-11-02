@@ -241,7 +241,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
             if (singularValues.length == 0) {
                 throw new UserException("No non-zero singular values were found.  Stricter filtering criteria may be required.");
             }
-            if (singularValues.length < numEigensamplesRequested) {
+            if (singularValues.length < numEigensamples) {
                 logger.warn(String.format("Attempted to truncate at %d eigensamples, but only %d non-zero singular values were found...",
                         numEigensamples, singularValues.length));
             }
