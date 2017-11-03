@@ -153,6 +153,7 @@ public final class MultidimensionalKernelSegmenter {
                         new SimpleInterval(chromosome, start, end),
                         copyRatioMidpointOverlapDetector,
                         allelicCountOverlapDetector));
+                continue;
             }
 
             final List<Integer> changepoints = new ArrayList<>(new KernelSegmenter<>(multidimensionalPointsInChromosome)

@@ -104,6 +104,7 @@ public final class AlleleFractionKernelSegmenter {
                 final int end = allelicCountsInChromosome.get(numAllelicCountsInChromosome - 1).getEnd();
                 segments.add(new AlleleFractionSegment(
                         new SimpleInterval(chromosome, start, end), numAllelicCountsInChromosome));
+                continue;
             }
 
             final List<Integer> changepoints = new ArrayList<>(new KernelSegmenter<>(alternateAlleleFractionsInChromosome)

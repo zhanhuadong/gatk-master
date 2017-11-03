@@ -94,6 +94,7 @@ public final class CopyRatioKernelSegmenter {
                 final int end = intervalsPerChromosome.get(chromosome).get(numDenoisedCopyRatiosInChromosome - 1).getEnd();
                 segments.add(new CopyRatioSegment(
                         new SimpleInterval(chromosome, start, end), denoisedCopyRatiosInChromosome));
+                continue;
             }
 
             final List<Integer> changepoints = new ArrayList<>(new KernelSegmenter<>(denoisedCopyRatiosInChromosome)
