@@ -73,17 +73,11 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
 
     //parameter names
     public static final String MINIMUM_INTERVAL_MEDIAN_PERCENTILE_LONG_NAME = "minimumIntervalMedianPercentile";
-    public static final String MINIMUM_INTERVAL_MEDIAN_PERCENTILE_SHORT_NAME = "minIntervalMedPct";
     public static final String MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE_LONG_NAME = "maximumZerosInSamplePercentage";
-    public static final String MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE_SHORT_NAME = "maxZerosInSamplePct";
     public static final String MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE_LONG_NAME = "maximumZerosInIntervalPercentage";
-    public static final String MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE_SHORT_NAME = "maxZerosInIntervalPct";
     public static final String EXTREME_SAMPLE_MEDIAN_PERCENTILE_LONG_NAME = "extremeSampleMedianPercentile";
-    public static final String EXTREME_SAMPLE_MEDIAN_PERCENTILE_SHORT_NAME = "extSampleMedPct";
-    public static final String IMPUTE_ZEROS_LONG_NAME = "imputeZeros";
-    public static final String IMPUTE_ZEROS_SHORT_NAME = "impZeros";
+    public static final String IMPUTE_ZEROS_LONG_NAME = "doImputeZeros";
     public static final String EXTREME_OUTLIER_TRUNCATION_PERCENTILE_LONG_NAME = "extremeOutlierTruncationPercentile";
-    public static final String EXTREME_OUTLIER_TRUNCATION_PERCENTILE_SHORT_NAME = "extOutTruncPct";
 
     //default values for filtering
     private static final double DEFAULT_MINIMUM_INTERVAL_MEDIAN_PERCENTILE = 10.0;
@@ -127,7 +121,6 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
                     "below this percentile are filtered out.  " +
                     "(This is the first filter applied.)",
             fullName = MINIMUM_INTERVAL_MEDIAN_PERCENTILE_LONG_NAME,
-            shortName = MINIMUM_INTERVAL_MEDIAN_PERCENTILE_SHORT_NAME,
             minValue = 0.,
             maxValue = 100.,
             optional = true
@@ -138,7 +131,6 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
             doc = "Samples with a fraction of zero-coverage genomic intervals above this percentage are filtered out.  " +
                     "(This is the second filter applied.)",
             fullName = MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE_LONG_NAME,
-            shortName = MAXIMUM_ZEROS_IN_SAMPLE_PERCENTAGE_SHORT_NAME,
             minValue = 0.,
             maxValue = 100.,
             optional = true
@@ -149,7 +141,6 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
             doc = "Genomic intervals with a fraction of zero-coverage samples above this percentage are filtered out.  " +
                     "(This is the third filter applied.)",
             fullName = MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE_LONG_NAME,
-            shortName = MAXIMUM_ZEROS_IN_INTERVAL_PERCENTAGE_SHORT_NAME,
             minValue = 0.,
             maxValue = 100.,
             optional = true
@@ -161,7 +152,6 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
                     "below this percentile or above the complementary percentile are filtered out.  " +
                     "(This is the fourth filter applied.)",
             fullName = EXTREME_SAMPLE_MEDIAN_PERCENTILE_LONG_NAME,
-            shortName = EXTREME_SAMPLE_MEDIAN_PERCENTILE_SHORT_NAME,
             minValue = 0.,
             maxValue = 50.,
             optional = true
@@ -172,7 +162,6 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
             doc = "If true, impute zero-coverage values as the median of the non-zero values in the corresponding interval.  " +
                     "(This is applied after all filters.)",
             fullName = IMPUTE_ZEROS_LONG_NAME,
-            shortName = IMPUTE_ZEROS_SHORT_NAME,
             optional = true
     )
     private boolean doImputeZeros = DEFAULT_DO_IMPUTE_ZEROS;
@@ -182,7 +171,6 @@ public final class CreateReadCountPanelOfNormals extends SparkCommandLineProgram
                     "below this percentile or above the complementary percentile are set to the corresponding percentile value.  " +
                     "(This is applied after all filters and imputation.)",
             fullName = EXTREME_OUTLIER_TRUNCATION_PERCENTILE_LONG_NAME,
-            shortName = EXTREME_OUTLIER_TRUNCATION_PERCENTILE_SHORT_NAME,
             minValue = 0.,
             maxValue = 50.,
             optional = true
