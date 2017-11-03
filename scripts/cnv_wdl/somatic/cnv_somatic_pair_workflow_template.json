@@ -1,4 +1,5 @@
 {
+  "CNVSomaticPairWorkflow.intervals":  "$__intervals__",
   "CNVSomaticPairWorkflow.common_sites":  "$__common_sites__",
   "CNVSomaticPairWorkflow.read_count_pon": "$__read_count_pon__",
   "CNVSomaticPairWorkflow.tumor_bam": "$__tumor_bam__",

@@ -7,12 +7,12 @@
 #    normal_bam_2    bam_idx_2
 #    ...
 #
-# - The interval-list file is required for the WES workflow and should be a Picard or GATK-style interval list.
+# - The interval-list file is required for both WGS and WES workflows and should be a Picard or GATK-style interval list.
 #   These intervals will be padded on both sides by the amount specified by PreprocessIntervals.padding (default 250)
 #   and split into bins of length specified by PreprocessIntervals.bin_length (default 1000; specify 0 to skip binning).
-#
-# - If an interval-list file is not provided, then the WGS workflow will be run instead and the specified value of
-#   PreprocessIntervals.bin_length (default 1000) will be used to bin the entire genome.
+#   For WGS, the intervals should simply cover the autosomal chromosomes (sex chromosomes may be included, but care
+#   should be taken to 1) avoid creating panels of mixed sex, and 2) denoise case samples only with panels containing
+#   individuals of the same sex as the case samples).
 #
 # - Example invocation:
 #    java -jar cromwell.jar run cnv_somatic_panel_workflow.wdl myParameters.json
@@ -24,7 +24,7 @@
 import "cnv_common_tasks.wdl" as CNVTasks
 
 workflow CNVSomaticPanelWorkflow {
-    File? intervals
+    File intervals
     File normal_bams_list
     Array[Array[String]]+ normal_bams = read_tsv(normal_bams_list)
     String pon_entity_id
@@ -90,6 +90,7 @@ task CreateReadCountPanelOfNormals {
     Float? maximum_zeros_in_sample_percentage
     Float? maximum_zeros_in_interval_percentage
     Float? extreme_sample_median_percentile
+    Boolean? do_impute_zeros
     Float? extreme_outlier_truncation_percentile
     Int? number_of_eigensamples
     File? annotated_intervals   #do not perform explicit GC correction by default
@@ -108,6 +109,7 @@ task CreateReadCountPanelOfNormals {
             --maximumZerosInSamplePercentage ${default="5.0" maximum_zeros_in_sample_percentage} \
             --maximumZerosInIntervalPercentage ${default="5.0" maximum_zeros_in_interval_percentage} \
             --extremeSampleMedianPercentile ${default="2.5" extreme_sample_median_percentile} \
+            --doImputeZeros ${default="true" do_impute_zeros} \
             --extremeOutlierTruncationPercentile ${default="0.1" extreme_outlier_truncation_percentile} \
             --numberOfEigensamples ${default="20" number_of_eigensamples} \
             ${"--annotatedIntervals " + annotated_intervals} \

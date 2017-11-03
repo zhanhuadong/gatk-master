@@ -1,4 +1,5 @@
 {
+  "CNVSomaticPairWorkflow.intervals":  "/home/travis/build/broadinstitute/gatk/src/test/resources/large/cnv_somatic_workflows_test_files/chr20.interval_list",
   "CNVSomaticPairWorkflow.common_sites":  "/home/travis/build/broadinstitute/gatk/src/test/resources/large/cnv_somatic_workflows_test_files/common_snps_sample-chr20.interval_list",
   "CNVSomaticPairWorkflow.read_count_pon": "/home/travis/build/broadinstitute/gatk/src/test/resources/large/cnv_somatic_workflows_test_files/wgs-no-gc.pon.hdf5",
   "CNVSomaticPairWorkflow.tumor_bam": "/home/travis/build/broadinstitute/gatk/src/test/resources/large/cnv_somatic_workflows_test_files/HCC1143-t1-chr20-downsampled.deduplicated.bam",

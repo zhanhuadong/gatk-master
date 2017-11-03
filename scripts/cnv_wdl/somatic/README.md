@@ -15,7 +15,7 @@ To get started, copy the relevant ``*.template.json`` for the workflow you wish 
 
 The reference used must be the same between PoN and case samples.
 
-- ``CNVSomaticPanelWorkflow.intervals`` -- (optional) Picard or GATK-style interval list.  If provided, then WES workflow will be run; otherwise, WGS workflow will be run.
+- ``CNVSomaticPanelWorkflow.intervals`` -- Picard or GATK-style interval list.  For WGS, this should typically only include the autosomal chromosomes.
 - ``CNVSomaticPanelWorkflow.normal_bams_list`` -- TSV file consisting of corresponding bam and corresponding index files as described in cnv_somatic_panel_workflow.wdl.
 - ``CNVSomaticPanelWorkflow.pon_entity_id`` -- Name of the final PoN file.
 - ``CNVSomaticPanelWorkflow.ref_fasta`` -- Path to reference fasta file.
@@ -36,7 +36,7 @@ Further explanation of other task-level parameters may be found by invoking the 
 
 The reference (and bins, if specified) used must be the same between PoN and case samples.
 
-- ``CNVSomaticPairWorkflow.intervals`` -- (optional) Picard or GATK-style interval list.  If provided, then WES workflow will be run; otherwise, WGS workflow will be run.
+- ``CNVSomaticPairWorkflow.intervals`` -- Picard or GATK-style interval list.  For WGS, this should typically only include the autosomal chromosomes.
 - ``CNVSomaticPairWorkflow.common_sites`` -- Picard or GATK-style interval list of common sites to use for collecting allelic counts.
 - ``CNVSomaticPairWorkflow.read_count_pon`` -- Path to read-count PoN created by the panel workflow. 
 - ``CNVSomaticPairWorkflow.tumor_bam`` -- File path or storage location (depending on backend) of the tumor BAM file.

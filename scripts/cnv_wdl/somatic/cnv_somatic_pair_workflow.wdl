@@ -2,14 +2,15 @@
 #
 # Notes:
 #
-# - The interval-list file is required for the WES workflow and should be a Picard or GATK-style interval list.
+# - The interval-list file is required for both WGS and WES workflows and should be a Picard or GATK-style interval list.
 #   These intervals will be padded on both sides by the amount specified by PreprocessIntervals.padding (default 250)
 #   and split into bins of length specified by PreprocessIntervals.bin_length (default 1000; specify 0 to skip binning).
+#   For WGS, the intervals should simply cover the autosomal chromosomes (sex chromosomes may be included, but care
+#   should be taken to 1) avoid creating panels of mixed sex, and 2) denoise case samples only with panels containing
+#   individuals of the same sex as the case samples).
 #
-# - If an interval-list file is not provided, then the WGS workflow will be run instead and the specified value of
-#   PreprocessIntervals.bin_length (default 1000) will be used to bin the entire genome.
-#
-# - The sites file (common_sites) should be a Picard or GATK-style interval list.
+# - The sites file (common_sites) should be a Picard or GATK-style interval list.  This is a list of sites
+#   of known variation at which allelic counts will be collected for use in modeling minor-allele fractions.
 #
 # - Example invocation:
 #    java -jar cromwell.jar run cnv_somatic_pair_workflow.wdl myParameters.json
@@ -21,7 +22,7 @@
 import "cnv_common_tasks.wdl" as CNVTasks
 
 workflow CNVSomaticPairWorkflow {
-    File? intervals
+    File intervals
     File common_sites
     File tumor_bam
     File tumor_bam_idx
