@@ -138,7 +138,7 @@ public final class AlleleFractionModeller {
         minorFractionsSamples.addAll(gibbsSampler.getSamples(AlleleFractionParameter.MINOR_ALLELE_FRACTIONS, AlleleFractionState.MinorFractions.class, numBurnIn));
     }
 
-    public List<Double> getmeanBiasSamples() {
+    public List<Double> getMeanBiasSamples() {
         return Collections.unmodifiableList(meanBiasSamples);
     }
 

@@ -1,8 +1,6 @@
 package org.broadinstitute.hellbender.tools.copynumber.allelic.model;
 
 import htsjdk.samtools.util.Log;
-import org.apache.spark.api.java.JavaSparkContext;
-import org.broadinstitute.hellbender.engine.spark.SparkContextFactory;
 import org.broadinstitute.hellbender.tools.copynumber.formats.collections.ParameterDecileCollection;
 import org.broadinstitute.hellbender.tools.copynumber.formats.metadata.SampleMetadata;
 import org.broadinstitute.hellbender.tools.copynumber.formats.metadata.SimpleSampleMetadata;
@@ -66,7 +64,7 @@ public final class AlleleFractionModellerUnitTest extends BaseTest {
         final AlleleFractionModeller modeller = new AlleleFractionModeller(simulatedData.getData(), prior);
         modeller.fitMCMC(numSamples, numBurnIn);
 
-        final List<Double> meanBiasSamples = modeller.getmeanBiasSamples();
+        final List<Double> meanBiasSamples = modeller.getMeanBiasSamples();
         Assert.assertEquals(meanBiasSamples.size(), numSamples - numBurnIn);
 
         final List<Double> biasVarianceSamples = modeller.getBiasVarianceSamples();
