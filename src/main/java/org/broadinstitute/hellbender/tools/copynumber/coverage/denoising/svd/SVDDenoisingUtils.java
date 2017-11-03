@@ -71,12 +71,13 @@ public final class SVDDenoisingUtils {
                                                                         final double maximumZerosInSamplePercentage,
                                                                         final double maximumZerosInIntervalPercentage,
                                                                         final double extremeSampleMedianPercentile,
+                                                                        final boolean doImputeZeros,
                                                                         final double extremeOutlierTruncationPercentile) {
         //preprocess (transform to fractional coverage, correct GC bias, filter, impute, truncate) and return copy of submatrix
         logger.info("Preprocessing read counts...");
         final PreprocessedStandardizedResult preprocessedStandardizedResult = preprocessPanel(readCounts, intervalGCContent,
                 minimumIntervalMedianPercentile, maximumZerosInSamplePercentage, maximumZerosInIntervalPercentage,
-                extremeSampleMedianPercentile, extremeOutlierTruncationPercentile);
+                extremeSampleMedianPercentile, doImputeZeros, extremeOutlierTruncationPercentile);
         logger.info("Panel read counts preprocessed.");
 
         //standardize in place
@@ -180,6 +181,7 @@ public final class SVDDenoisingUtils {
                                                                   final double maximumZerosInSamplePercentage,
                                                                   final double maximumZerosInIntervalPercentage,
                                                                   final double extremeSampleMedianPercentile,
+                                                                  final boolean doImputeZeros,
                                                                   final double extremeOutlierTruncationPercentile) {
         transformToFractionalCoverage(readCounts);
         performOptionalGCBiasCorrection(readCounts, intervalGCContent);
@@ -293,25 +295,28 @@ public final class SVDDenoisingUtils {
         logHeapUsage();
 
         //impute zeros as median of non-zero values in interval
-        //TODO make this optional
-        final int numPanelIntervals = panelIntervalIndices.length;
-        final double[] intervalNonZeroMedians = IntStream.range(0, numPanelIntervals)
-                .mapToObj(intervalIndex -> Arrays.stream(preprocessedReadCounts.getColumn(intervalIndex)).filter(value -> value > 0.).toArray())
-                .mapToDouble(nonZeroValues -> new Median().evaluate(nonZeroValues))
-                .toArray();
-        final int[] numImputed = {0};  //needs to be effectively final to be used inside visitor
-        preprocessedReadCounts.walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
-            @Override
-            public double visit(int sampleIndex, int intervalIndex, double value) {
-                if (value == 0.) {
-                    numImputed[0]++;
-                    return intervalNonZeroMedians[intervalIndex];
+        if (!doImputeZeros) {
+            logger.info("Skipping imputation of zero-coverage values...");
+        } else {
+            final int numPanelIntervals = panelIntervalIndices.length;
+            final double[] intervalNonZeroMedians = IntStream.range(0, numPanelIntervals)
+                    .mapToObj(intervalIndex -> Arrays.stream(preprocessedReadCounts.getColumn(intervalIndex)).filter(value -> value > 0.).toArray())
+                    .mapToDouble(nonZeroValues -> new Median().evaluate(nonZeroValues))
+                    .toArray();
+            final int[] numImputed = {0};  //needs to be effectively final to be used inside visitor
+            preprocessedReadCounts.walkInOptimizedOrder(new DefaultRealMatrixChangingVisitor() {
+                @Override
+                public double visit(int sampleIndex, int intervalIndex, double value) {
+                    if (value == 0.) {
+                        numImputed[0]++;
+                        return intervalNonZeroMedians[intervalIndex];
+                    }
+                    return value;
                 }
-                return value;
-            }
-        });
-        logger.info(String.format("%d zero-coverage values were imputed to the median of the non-zero values in the corresponding interval...",
-                numImputed[0]));
+            });
+            logger.info(String.format("%d zero-coverage values were imputed to the median of the non-zero values in the corresponding interval...",
+                    numImputed[0]));
+        }
 
         //truncate extreme values to the corresponding percentile
         if (extremeOutlierTruncationPercentile == 0.) {

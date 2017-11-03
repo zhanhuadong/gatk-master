@@ -12,6 +12,7 @@ import org.apache.spark.mllib.linalg.distributed.RowMatrix;
 import org.broadinstitute.hdf5.HDF5File;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.copynumber.CreateReadCountPanelOfNormals;
 import org.broadinstitute.hellbender.tools.copynumber.utils.HDF5Utils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -24,12 +25,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * TODO
+ * Represents the SVD panel of normals to be created by {@link CreateReadCountPanelOfNormals}.
  *
- * Several attributes are stored transposed.  This dodges a very slow write time in HDF5,
- * since HDF5 writes wide matrices much faster than tall matrices.
- *
- * The following are stored as transposes:
+ * Most attributes are stored as wide matrices (i.e., more columns than rows) when possible.
+ * This dodges a very slow write time in HDF5, since HDF5 writes wide matrices much faster than tall matrices.
  *
  * @author Samuel Lee &lt;slee@broadinstitute.org&gt;
  */
@@ -69,9 +68,9 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
     private final Lazy<List<SimpleInterval>> panelIntervals;
 
     /**
-     * <p>DEV NOTE:  If you are adding attributes that are neither RealMatrix nor a primitive,
+     * DEV NOTE: If you are adding attributes that are neither RealMatrix nor a primitive,
      * you must follow the pattern in the constructor (i.e. the Lazy loading pattern).
-     * Otherwise, some operations will hang.</p>
+     * Otherwise, some operations will hang.
      */
     private HDF5SVDReadCountPanelOfNormals(final HDF5File file) {
         Utils.nonNull(file);
@@ -167,6 +166,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
                               final double maximumZerosInSamplePercentage,
                               final double maximumZerosInIntervalPercentage,
                               final double extremeSampleMedianPercentile,
+                              final boolean doImputeZeros,
                               final double extremeOutlierTruncationPercentile,
                               final int numEigensamplesRequested,
                               final JavaSparkContext ctx) {
@@ -201,7 +201,7 @@ public final class HDF5SVDReadCountPanelOfNormals implements SVDReadCountPanelOf
             final SVDDenoisingUtils.PreprocessedStandardizedResult preprocessedStandardizedResult =
                     SVDDenoisingUtils.preprocessAndStandardizePanel(originalReadCounts, intervalGCContent,
                             minimumIntervalMedianPercentile, maximumZerosInSamplePercentage, maximumZerosInIntervalPercentage,
-                            extremeSampleMedianPercentile, extremeOutlierTruncationPercentile);
+                            extremeSampleMedianPercentile, doImputeZeros, extremeOutlierTruncationPercentile);
 
             //filter samples and intervals
             final List<String> panelSampleFilenames = IntStream.range(0, originalSampleFilenames.size())
