@@ -30,7 +30,7 @@ public final class ReadLengthReadFilter extends ReadFilter implements Serializab
     public int minReadLength = 1;
 
     // Command line parser requires a no-arg constructor
-    public ReadLengthReadFilter() {}
+    public ReadLengthReadFilter() { }
 
     public ReadLengthReadFilter( final int minLength, final int maxLength ) {
         this.minReadLength = minLength;

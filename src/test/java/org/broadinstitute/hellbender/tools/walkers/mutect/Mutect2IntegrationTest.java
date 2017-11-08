@@ -8,6 +8,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.broadinstitute.hellbender.CommandLineProgramTest;
 import org.broadinstitute.hellbender.Main;
 import org.broadinstitute.hellbender.engine.FeatureDataSource;
+import org.broadinstitute.hellbender.engine.filters.ReadLengthReadFilter;
+import org.broadinstitute.hellbender.engine.filters.ReadStartPositionFilter;
 import org.broadinstitute.hellbender.tools.exome.orientationbiasvariantfilter.OrientationBiasUtils;
 import org.broadinstitute.hellbender.tools.walkers.validation.ConcordanceSummaryRecord;
 import org.broadinstitute.hellbender.utils.Utils;
@@ -67,7 +69,9 @@ public class Mutect2IntegrationTest extends CommandLineProgramTest {
                 "-L", "20",
                 "-germline-resource", GNOMAD.getAbsolutePath(),
                 "-XL", mask.getAbsolutePath(),
-                "-O", unfilteredVcf.getAbsolutePath()
+                "-O", unfilteredVcf.getAbsolutePath(),
+                "--readFilter", ReadStartPositionFilter.class.getSimpleName(),
+                "--blacklist", "20:100-20000000"
         };
 
         runCommandLine(args);
