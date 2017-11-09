@@ -63,6 +63,37 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
     private static final Class<?> pluginBaseClass = org.broadinstitute.hellbender.tools.walkers.annotator.Annotation.class;
 
     /**
+     * @param userArgs           Argument collection to control the exposure of the command line arguments.
+     * @param toolDefaultFilters Default filters that may be supplied with arguments
+     *                           on the command line. May be null.
+     */
+    public GATKAnnotationPluginDescriptor(final GATKReadFilterArgumentCollection userArgs, final List<Annotation> toolDefaultFilters) {
+        this.userArgs = userArgs;
+        if (null != toolDefaultFilters) {
+            toolDefaultFilters.forEach(f -> {
+                final Class<? extends ReadFilter> rfClass = f.getClass();
+                // anonymous classes have a 0-length simple name, and thus cannot be accessed or
+                // controlled by the user via the command line, but they should still be valid
+                // as default filters, so use the full name to ensure that their map entries
+                // don't clobber each other
+                String className = rfClass.getSimpleName();
+                if (className.length() == 0) {
+                    className = rfClass.getName();
+                }
+                toolDefaultReadFilters.put(className, f);
+            });
+        }
+    }
+
+    /**
+     * @param toolDefaultFilters Default filters that may be supplied with arguments
+     *                           on the command line. May be null.
+     */
+    public GATKAnnotationPluginDescriptor(final List<Annotation> toolDefaultFilters) {
+        this(new DefaultGATKReadFilterArgumentCollection(), toolDefaultFilters);
+    }
+
+    /**
      * @return the class object for the base class of all plugins managed by this descriptor
      */
     @Override
@@ -75,9 +106,54 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
     @Override
     public List<String> getPackageNames() {return Collections.singletonList(pluginPackageName);};
 
+    /**
+     * Return an instance of the specified pluggable class. The descriptor should
+     * instantiate or otherwise obtain (possibly by having been provided an instance
+     * through the descriptor's constructor) an instance of this plugin class.
+     * The descriptor should maintain a list of these instances so they can later
+     * be retrieved by {@link #getAllInstances}.
+     *
+     * In addition, implementations should recognize and reject any attempt to instantiate
+     * a second instance of a plugin that has the same simple class name as another plugin
+     * controlled by this descriptor (which can happen if they have different qualified names
+     * within the base package used by the descriptor) since the user has no way to disambiguate
+     * these on the command line).
+     *
+     * @param pluggableClass a plugin class discovered by the command line parser that
+     *                       was not rejected by {@link #getClassFilter}
+     * @return the instantiated object that will be used by the command line parser
+     * as an argument source
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     */
+    //TODO
     @Override
     public Object getInstance(Class<?> pluggableClass) throws IllegalAccessException, InstantiationException {
-        return null;
+        Annotation readFilter = null;
+        final String simpleName = pluggableClass.getSimpleName();
+
+        if (allDiscoveredReadFilters.containsKey(simpleName)) {
+            // we found a plugin class with a name that collides with an existing class;
+            // plugin names must be unique even across packages
+            throw new IllegalArgumentException(
+                    String.format("A plugin class name collision was detected (%s/%s). " +
+                                    "Simple names of plugin classes must be unique across packages.",
+                            pluggableClass.getName(),
+                            allDiscoveredReadFilters.get(simpleName).getClass().getName())
+            );
+        } else if (toolDefaultReadFilters.containsKey(simpleName)) {
+            // an instance of this class was provided by the tool as one of it's default filters;
+            // use the default instance as the target for command line argument values
+            // rather than creating a new one, in case it has state provided by the tool
+            readFilter = toolDefaultReadFilters.get(simpleName);
+        } else {
+            readFilter = (ReadFilter) pluggableClass.newInstance();
+        }
+
+        // Add all filters to the allDiscoveredReadFilters list, even if the instance came from the
+        // tool defaults list (we want the actual instances to be shared to preserve state)
+        allDiscoveredReadFilters.put(simpleName, readFilter);
+        return readFilter;
     }
 
     @Override

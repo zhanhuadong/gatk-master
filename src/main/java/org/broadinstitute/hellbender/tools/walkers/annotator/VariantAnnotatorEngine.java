@@ -4,7 +4,7 @@ import com.google.common.collect.Sets;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.*;
 import org.broadinstitute.barclay.argparser.CommandLineException;
-import org.broadinstitute.hellbender.cmdline.argumentcollections.VariantAnnotationArgumentCollection;
+import org.broadinstitute.hellbender.cmdline.GATKPlugin.VariantAnnotationArgumentCollection;
 import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
@@ -13,7 +13,6 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.ReducibleAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.ReducibleAnnotationData;
 import org.broadinstitute.hellbender.utils.ClassUtils;
-import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
@@ -126,7 +125,7 @@ public final class VariantAnnotatorEngine {
 
     /**
      * An overload of {@link org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine#ofSelectedMinusExcluded ofSelectedMinusExcluded}
-     * except that it accepts a {@link org.broadinstitute.hellbender.cmdline.argumentcollections.VariantAnnotationArgumentCollection} as input.
+     * except that it accepts a {@link VariantAnnotationArgumentCollection} as input.
      * @param argumentCollection            VariantAnnotationArgumentCollection containing requested annotations.
      * @param dbSNPInput                    input for variants from a known set from DbSNP or null if not provided.
      *                   The annotation engine will mark variants overlapping anything in this set using {@link htsjdk.variant.vcf.VCFConstants#DBSNP_KEY}.

@@ -1,4 +1,4 @@
-package org.broadinstitute.hellbender.cmdline.argumentcollections;
+package org.broadinstitute.hellbender.cmdline.GATKPlugin;
 
 import org.broadinstitute.barclay.argparser.Advanced;
 import org.broadinstitute.barclay.argparser.Argument;

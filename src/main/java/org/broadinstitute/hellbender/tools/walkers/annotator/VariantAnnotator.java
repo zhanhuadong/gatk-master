@@ -11,7 +11,7 @@ import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.DbsnpArgumentCollection;
-import org.broadinstitute.hellbender.cmdline.argumentcollections.VariantAnnotationArgumentCollection;
+import org.broadinstitute.hellbender.cmdline.GATKPlugin.VariantAnnotationArgumentCollection;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
