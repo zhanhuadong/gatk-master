@@ -4,13 +4,19 @@ import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFHeader;
 import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
+import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.VariantFilter;
 import org.broadinstitute.hellbender.engine.filters.VariantFilterLibrary;
+import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.utils.IndexUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Spliterator;
+import java.util.function.BiFunction;
 import java.util.stream.StreamSupport;
 
 /**
@@ -149,4 +155,21 @@ public abstract class VariantWalkerBase extends GATKTool {
      */
     public abstract void apply( VariantContext variant, ReadsContext readsContext, ReferenceContext referenceContext, FeatureContext featureContext );
 
+    //TODO maybe I should be using this as the source of the annotator engine but its unclear t
+    /**
+     * Merge the default filters with the users's command line read filter requests, then initialize
+     * the resulting filters.
+     *
+     * @param vcfHeader - a VCFFileHeader to use to initialize read filter instances
+     * @return Single merged read filter.
+     */
+    public final VariantAnnotatorEngine getVariantAnnotatorEngine(final VCFHeader vcfHeader, final boolean useRaw) {
+        Utils.nonNull(vcfHeader);
+        return getVariantAnnotatorEngine(
+                vcfHeader,
+                (annotations, header) -> {
+                    return new VariantAnnotatorEngine(annotations, );
+                }
+        );
+    }
 }

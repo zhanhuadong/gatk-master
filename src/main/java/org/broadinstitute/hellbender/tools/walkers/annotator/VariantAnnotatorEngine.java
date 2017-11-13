@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.annotator;
 import com.google.common.collect.Sets;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.*;
+import org.apache.avro.generic.GenericData;
 import org.broadinstitute.barclay.argparser.CommandLineException;
 import org.broadinstitute.hellbender.cmdline.GATKPlugin.VariantAnnotationArgumentCollection;
 import org.broadinstitute.hellbender.engine.FeatureContext;
@@ -53,6 +54,34 @@ public final class VariantAnnotatorEngine {
             }
         }
     }
+
+    /**
+     * TODO comment this out
+     */
+    public VariantAnnotatorEngine(final List<Annotation> annotationList,
+                                   final FeatureInput<VariantContext> dbSNPInput,
+                                   final List<FeatureInput<VariantContext>> featureInputs,
+                                   final boolean useRaw){
+        infoAnnotations = new ArrayList<>();
+        genotypeAnnotations = new ArrayList<>();
+        for (Annotation annot : annotationList) {
+            if (annot instanceof InfoFieldAnnotation) {
+                infoAnnotations.add((InfoFieldAnnotation) annot);
+            }
+            if (annot instanceof GenotypeAnnotation) {
+                genotypeAnnotations.add((GenotypeAnnotation) annot);
+            }
+        }
+        variantOverlapAnnotator = initializeOverlapAnnotator(dbSNPInput, featureInputs);
+        reducibleKeys = new HashSet<>();
+        useRawAnnotations = useRaw;
+        for (InfoFieldAnnotation annot : infoAnnotations) {
+            if (annot instanceof ReducibleAnnotation) {
+                reducibleKeys.add(((ReducibleAnnotation) annot).getRawKeyName());
+            }
+        }
+    }
+
 
     /**
      * Makes the engine for all known annotation types (minus the excluded ones).
