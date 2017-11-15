@@ -98,7 +98,7 @@ public class SomaticActiveRegionEngine implements AssemblyRegionEvaluator {
     private double calculateEvidenceAfterRealignment(ReadPileup pileup, List<Evidence> tumorAltReads, int tumorRefCount) {
         final Locatable loc = pileup.getLocation();
         final Interval interval = new Interval(loc.getContig(), loc.getStart(), loc.getEnd());
-        final Interval supposedRealignmentLocation = realigner.get().getRealignemntCoordinates(interval);
+        final Interval supposedRealignmentLocation = realigner.get().getRealignmentCoordinates(interval);
 
         int realignmentFailCount = 0;
         double qualSum = 0;

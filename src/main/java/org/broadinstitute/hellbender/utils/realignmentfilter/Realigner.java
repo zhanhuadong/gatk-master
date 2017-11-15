@@ -43,7 +43,7 @@ public class Realigner {
         return read.getMappingQuality() == 0;
     }
 
-    public Interval getRealignemntCoordinates(final Interval bamCoordinates) {
+    public Interval getRealignmentCoordinates(final Interval bamCoordinates) {
         return convertToRealignmentCoordinates.apply(bamCoordinates);
     }
 
