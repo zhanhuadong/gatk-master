@@ -10,8 +10,12 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class Realigner {
+    public static final int MIN_MAP_QUALITY_FOR_REALIGNED_READS = 40;
+
+
     private final BwaMemAligner aligner;
     private final Optional<LiftOver> liftoverToRealignmentCoordinates;
     private final Function<Interval, Interval> convertToRealignmentCoordinates;
@@ -35,7 +39,7 @@ public class Realigner {
     }
 
     //TODO: same comment
-    public static boolean isFailedRealignment(final GATKRead read) {
+    public static boolean isMarkedAsFailedRealignment(final GATKRead read) {
         return read.getMappingQuality() == 0;
     }
 
@@ -47,29 +51,28 @@ public class Realigner {
     public boolean mapsToSupposedLocation(final GATKRead read, final Interval supposedRealignmentLocation) {
 
         final List<BwaMemAlignment> alignments = aligner.alignSeqs(Arrays.asList(read), GATKRead::getBases).get(0);
-        if (supposedRealignmentLocation == null) {
-            return false;
-        }
-        //TODO Incomplete!!!!!
-        if (alignments.isEmpty()) { // does this ever occur?
-            return false;
-        } else if (alignments.size() == 1) {
-            final BwaMemAlignment alignment = alignments.get(0);
-            final int contigId = alignment.getRefId();
-            if (contigId < 0) {
-                return false;
-            }
-            if (new Interval(realignmentContigs.get(contigId), alignment.getRefStart(), alignment.getRefEnd()).overlaps(supposedRealignmentLocation)) {
-                return true;
-            } else {
-                int j = 4;
-                return false;
-            }
-        } else {
-            int q = 3;
-            //TODO: flesh out
+        if (supposedRealignmentLocation == null || alignments.isEmpty()) {
             return false;
         }
 
+        if (alignments.size() > 1) {
+            // sort by descending mapping quality
+            Collections.sort(alignments, (a1,a2) -> Double.compare(a2.getMapQual(), a1.getMapQual()));
+        }
+
+        final BwaMemAlignment alignment = alignments.get(0);
+        if (alignment.getMapQual() < MIN_MAP_QUALITY_FOR_REALIGNED_READS) {
+            return false;
+        }
+
+        final int contigId = alignment.getRefId();
+        if (contigId < 0) {
+            return false;
+        }
+
+        // TODO: is this necessary?   Maybe we could just check the contig
+        // TODO: without checking all the coordinates.  We could also check the contig within some liftover fudge factor of 5 megabases or so
+        // TODO: then we wouldn't need a liftover
+        return new Interval(realignmentContigs.get(contigId), alignment.getRefStart(), alignment.getRefEnd()).overlaps(supposedRealignmentLocation);
     }
 }

@@ -5,7 +5,6 @@ import htsjdk.samtools.util.Interval;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFConstants;
-import org.apache.commons.math3.util.Pair;
 import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.AssemblyRegionEvaluator;
 import org.broadinstitute.hellbender.engine.FeatureContext;
@@ -106,7 +105,7 @@ public class SomaticActiveRegionEngine implements AssemblyRegionEvaluator {
         int altCount = 0;
 
         for (final Evidence ev : tumorAltReads) {
-            if (Realigner.isFailedRealignment(ev.read)) {
+            if (Realigner.isMarkedAsFailedRealignment(ev.read)) {
                 realignmentFailCount++;
                 continue;
             }
