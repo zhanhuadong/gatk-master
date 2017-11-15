@@ -33,6 +33,8 @@ workflow m2_validation {
     String? normal_sample_name
     File? pon
     File? pon_index
+    File? liftover
+    File? index_bundle
     Int scatter_count
     File? gnomad
     File? gnomad_index
@@ -109,6 +111,8 @@ workflow m2_validation {
                 scatter_count = scatter_count,
                 pon = pon,
                 pon_index = pon_index,
+                liftover = liftover,
+                index_bundle = index_bundle,
                 gnomad = gnomad,
                 gnomad_index = gnomad_index,
                 is_run_orientation_bias_filter = is_run_orientation_bias_filter,

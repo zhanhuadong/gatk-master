@@ -31,6 +31,8 @@ workflow HapmapSensitivity {
   	File? intervals
   	File? pon
   	File? pon_index
+  	File? liftover
+    File? index_bundle
   	Boolean is_run_orientation_bias_filter
     Array[String] artifact_modes
     File picard_jar
@@ -75,6 +77,8 @@ workflow HapmapSensitivity {
                 ref_dict = ref_dict,
                 pon = pon,
                 pon_index = pon_index,
+                liftover = liftover,
+                index_bundle = index_bundle,
                 is_run_orientation_bias_filter = is_run_orientation_bias_filter,
                 is_run_oncotator = false,
 		        gatk_docker = "ubuntu:16.04",

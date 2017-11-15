@@ -73,6 +73,8 @@ workflow Mutect2_Multi {
 	Boolean is_run_orientation_bias_filter
 	Boolean is_run_oncotator
     File? gatk4_jar_override
+    File? liftover
+    File? index_bundle
 
     File? onco_ds_tar_gz
     String? onco_ds_local_db_dir
@@ -113,6 +115,8 @@ workflow Mutect2_Multi {
                     scatter_count = scatter_count,
                     gnomad = gnomad,
                     gnomad_index = gnomad_index,
+                    liftover = liftover,
+                    index_bundle = index_bundle,
                     variants_for_contamination = variants_for_contamination,
                     variants_for_contamination_index = variants_for_contamination_index,
                     is_run_orientation_bias_filter = is_run_orientation_bias_filter,

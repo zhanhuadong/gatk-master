@@ -32,6 +32,8 @@ workflow HapmapSensitivityAllPlexes {
   	File ref_dict
   	File? pon
   	File? pon_index
+    File? liftover
+    File? index_bundle
   	Boolean is_run_orientation_bias_filter
     File gatk
     Array[String] artifact_modes
@@ -61,6 +63,8 @@ workflow HapmapSensitivityAllPlexes {
           ref_dict = ref_dict,
           pon = pon,
           pon_index = pon_index,
+          liftover = liftover,
+          index_bundle = index_bundle,
           is_run_orientation_bias_filter = is_run_orientation_bias_filter,
           gatk = gatk,
           artifact_modes = artifact_modes,
@@ -84,6 +88,8 @@ workflow HapmapSensitivityAllPlexes {
           ref_dict = ref_dict,
           pon = pon,
           pon_index = pon_index,
+          liftover = liftover,
+          index_bundle = index_bundle,
           is_run_orientation_bias_filter = is_run_orientation_bias_filter,
           gatk = gatk,
           artifact_modes = artifact_modes,
@@ -107,6 +113,8 @@ workflow HapmapSensitivityAllPlexes {
           ref_dict = ref_dict,
           pon = pon,
           pon_index = pon_index,
+          liftover = liftover,
+          index_bundle = index_bundle,
           is_run_orientation_bias_filter = is_run_orientation_bias_filter,
           gatk = gatk,
           artifact_modes = artifact_modes,

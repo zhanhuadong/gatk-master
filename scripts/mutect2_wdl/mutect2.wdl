@@ -42,6 +42,8 @@ workflow Mutect2 {
   File? variants_for_contamination_index
   Boolean is_run_orientation_bias_filter
   Boolean is_run_oncotator
+  File? liftover
+  File? index_bundle
 
   File? gatk4_jar_override
   File? onco_ds_tar_gz
@@ -90,6 +92,8 @@ workflow Mutect2 {
         pon_index = pon_index,
         gnomad = gnomad,
         gnomad_index = gnomad_index,
+        liftover = liftover,
+        index_bundle = index_bundle,
         gatk4_jar_override = gatk4_jar_override,
         preemptible_attempts = preemptible_attempts,
         gatk_docker = gatk_docker,
@@ -204,6 +208,8 @@ task M2 {
   File? pon_index
   File? gnomad
   File? gnomad_index
+  File? liftover
+  File? index_bundle
   File? gatk4_jar_override
   String? m2_extra_args
   Boolean? is_bamOut
@@ -246,6 +252,7 @@ task M2 {
     ${"--germline-resource " + gnomad} \
     ${"-pon " + pon} \
     ${"-L " + intervals} \
+    ${"-bwa-mem-index-image " + index_bundle} ${"-liftover-chain-file " + liftover} \
     -O `cat vcf_name.txt` \
     ${true='--bamOutput bamout.bam' false='' is_bamOut} \
     ${m2_extra_args}

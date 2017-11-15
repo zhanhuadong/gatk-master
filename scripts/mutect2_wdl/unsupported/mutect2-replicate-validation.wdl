@@ -78,6 +78,8 @@ workflow Mutect2ReplicateValidation {
 	File? pon_index
 	File? gnomad
 	File? gnomad_index
+	File? liftover
+    File? index_bundle
 	Boolean is_run_orientation_bias_filter
 	String gatk_docker
 	File? gatk4_jar_override
@@ -103,6 +105,8 @@ workflow Mutect2ReplicateValidation {
 				normal_sample_name = pair[5],
 				pon = pon,
 				pon_index = pon_index,
+				liftover = liftover,
+				index_bundle = index_bundle,
 				scatter_count = scatter_count,
 				gnomad = gnomad,
 				gnomad_index = gnomad_index,

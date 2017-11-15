@@ -21,6 +21,8 @@ workflow Mutect2_Multi_Concordance {
 	File? gnomad_index
 	File? variants_for_contamination
     File? variants_for_contamination_index
+    File? liftover
+    File? index_bundle
 	Boolean is_run_orientation_bias_filter
     String gatk_docker
     File? gatk4_jar_override
@@ -46,6 +48,8 @@ workflow Mutect2_Multi_Concordance {
         	pon_index = pon_index,
         	gnomad = gnomad,
         	gnomad_index = gnomad_index,
+        	liftover = liftover,
+        	index_bundle = index_bundle,
         	variants_for_contamination = variants_for_contamination,
             variants_for_contamination_index = variants_for_contamination_index,
         	is_run_orientation_bias_filter = is_run_orientation_bias_filter,
