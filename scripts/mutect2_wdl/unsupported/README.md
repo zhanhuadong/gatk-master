@@ -54,7 +54,7 @@ In the same directory as your wdl scripts, fill in a file called sensitivity.jso
   "HapmapSensitivityAllPlexes.twenty_plex_preprocessed_idx": "[path to preprocessed 20-plex vcf index]",
   "HapmapSensitivityAllPlexes.python_script": "path to calculate_sensitivity.py",
   "HapmapSensitivityAllPlexes.m2_extra_args": "optionally, any additional Mutect2 command line arguments",
-  "HapmapSensitivityAllPlexes.m2_extra_filtering_args": "--maxEventsInHaplotype 100 --max_germline_posterior 1.0"
+  "HapmapSensitivityAllPlexes.m2_extra_filtering_args": "--max-events-in-region 100 --max-germline-posterior 1.0"
 }
 ```
 
