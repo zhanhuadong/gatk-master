@@ -14,11 +14,14 @@ import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.walkers.annotator.*;
 import org.broadinstitute.hellbender.utils.fasta.CachingIndexedFastaSequenceFile;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -193,6 +196,12 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
     }
 
     @Override
+    public List<Annotation> getDefaultAnnotations() { return Collections.singletonList(new StrandBiasBySample());}
+
+    @Override
+    public List<String> getDefaultAnnotationGroups() { return Arrays.asList(StandardAnnotation.class.getSimpleName(), StandardHCAnnotation.class.getSimpleName());}
+
+    @Override
     public AssemblyRegionEvaluator assemblyRegionEvaluator() {
         return hcEngine;
     }
@@ -200,7 +209,9 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
     @Override
     public void onTraversalStart() {
         final ReferenceSequenceFile referenceReader = getReferenceReader(referenceArguments);
-        hcEngine = new HaplotypeCallerEngine(hcArgs, createOutputBamIndex, createOutputBamMD5, getHeaderForReads(), referenceReader);
+        final VariantAnnotatorEngine variantAnnotatorEngine = new VariantAnnotatorEngine(getAnnotationsToUse(),
+                hcArgs.dbsnp.dbsnp, hcArgs.comps,  hcArgs.emitReferenceConfidence != ReferenceConfidenceMode.NONE);
+        hcEngine = new HaplotypeCallerEngine(hcArgs, createOutputBamIndex, createOutputBamMD5, getHeaderForReads(), referenceReader, variantAnnotatorEngine);
 
         // The HC engine will make the right kind (VCF or GVCF) of writer for us
         final SAMSequenceDictionary sequenceDictionary = getHeaderForReads().getSequenceDictionary();

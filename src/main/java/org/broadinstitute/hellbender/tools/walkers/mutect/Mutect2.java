@@ -228,6 +228,11 @@ public final class Mutect2 extends AssemblyRegionWalker {
     }
 
     @Override
+    public List<String> getDefaultAnnotationGroups() {
+        return Mutect2Engine.getStandardMutect2AnnotationGroups();
+    }
+
+    @Override
     public AssemblyRegionEvaluator assemblyRegionEvaluator() { return m2Engine; }
 
     @Override

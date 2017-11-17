@@ -4,11 +4,11 @@ import com.google.common.annotations.VisibleForTesting;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.GenotypesContext;
 import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.GenotypeCounts;
 import org.broadinstitute.hellbender.utils.GenotypeUtils;
@@ -16,12 +16,8 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
-import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 
 /**
@@ -46,7 +42,9 @@ public final class InbreedingCoeff extends InfoFieldAnnotation implements Standa
     private static final Logger logger = LogManager.getLogger(InbreedingCoeff.class);
     private static final int MIN_SAMPLES = 10;
     private static final boolean ROUND_GENOTYPE_COUNTS = false;
-    private final Set<String> founderIds;
+
+    @Argument(fullName = "founderID", shortName = "founderID", doc="Samples representing the population \"founders\"", optional=true)
+    private final List<String> founderIds;
 
     public InbreedingCoeff(){
         this(null);
@@ -54,7 +52,7 @@ public final class InbreedingCoeff extends InfoFieldAnnotation implements Standa
 
     public InbreedingCoeff(final Set<String> founderIds){
         //If available, get the founder IDs and cache them. the IC will only be computed on founders then.
-        this.founderIds = founderIds;
+        this.founderIds = founderIds == null? new ArrayList<>() : new ArrayList<>(founderIds);
     }
 
     @Override
@@ -62,7 +60,7 @@ public final class InbreedingCoeff extends InfoFieldAnnotation implements Standa
                                         final VariantContext vc,
                                         final ReadLikelihoods<Allele> likelihoods) {
         Utils.nonNull(vc);
-        final GenotypesContext genotypes = (founderIds == null || founderIds.isEmpty()) ? vc.getGenotypes() : vc.getGenotypes(founderIds);
+        final GenotypesContext genotypes = (founderIds == null || founderIds.isEmpty()) ? vc.getGenotypes() : vc.getGenotypes(new HashSet<>(founderIds));
         if (genotypes == null || genotypes.size() < MIN_SAMPLES || !vc.isVariant()) {
             return Collections.emptyMap();
         }

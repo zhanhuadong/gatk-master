@@ -13,18 +13,13 @@ import htsjdk.variant.vcf.VCFSimpleHeaderLine;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
+import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKAnnotationPluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.IntervalArgumentCollection;
@@ -41,6 +36,7 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
 import org.broadinstitute.hellbender.utils.SequenceDictionaryUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
@@ -175,7 +171,7 @@ public abstract class GATKTool extends CommandLineProgram {
      */
     @Override
     public List<? extends CommandLinePluginDescriptor<?>> getPluginDescriptors() {
-        return Collections.singletonList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()));
+        return Arrays.asList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()), new GATKAnnotationPluginDescriptor(getDefaultAnnotations(), getDefaultAnnotationGroups()));
     }
 
     /**
@@ -216,6 +212,47 @@ public abstract class GATKTool extends CommandLineProgram {
         return hasReads() ?
                 readFilterPlugin.getMergedCountingReadFilter(getHeaderForReads()) :
                 new CountingReadFilter(ReadFilterLibrary.ALLOW_ALL_READS);
+    }
+
+    /**
+     * TODO this needs to be commented
+     *
+     * @return List of individual filters to be applied for this tool.
+     */
+    public List<Annotation> getDefaultAnnotations() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * TODO this needs to be commented
+     *
+     * @return List of individual filters to be applied for this tool.
+     */
+    public List<String> getDefaultAnnotationGroups() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Returns a read filter (simple or composite) that can be applied to reads. This implementation combines
+     * the default read filters for this tool (returned by {@link #getDefaultReadFilters} along with any read filter
+     * command line directives specified by the user (such as enabling other filters or disabling default filters);
+     * wraps each filter in the resulting list with a CountingReadFilter; and returns a single composite filter
+     * resulting from the list by and'ing them together.
+     *
+     * NOTE: Most tools will not need to override the method, and should only do so in order to provide custom
+     * behavior or processing of the final merged read filter. To change the default read filters used by the tool,
+     * override {@link #getDefaultReadFilters} instead.
+     *
+     * Implementations of {@link #traverse()} should call this method once before iterating over the reads, in order to
+     * unnecessary avoid object allocation. Nevertheless, keeping state in filter objects is strongly discouraged.
+     *
+     * Multiple filters can be composed by using {@link org.broadinstitute.hellbender.engine.filters.ReadFilter}
+     * composition methods.
+     */
+    public List<Annotation> getAnnotationsToUse(){
+        final GATKAnnotationPluginDescriptor readFilterPlugin =
+                getCommandLineParser().getPluginDescriptor(GATKAnnotationPluginDescriptor.class);
+        return readFilterPlugin.getAllInstances();
     }
 
     /**

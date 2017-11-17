@@ -54,4 +54,10 @@ public class VariantAnnotationArgumentCollection implements Serializable {
     @Argument(fullName= StandardArgumentDefinitions.ANNOTATION_GROUP_LONG_NAME, shortName=StandardArgumentDefinitions.ANNOTATION_GROUP_SHORT_NAME, doc="One or more groups of annotations to apply to variant calls", optional=true)
     public List<String> annotationGroupsToUse = new ArrayList<>();
 
+    /**
+     * Hook allowing for the user to remove default annotations from the tool
+     */
+    @Argument(fullName= StandardArgumentDefinitions.DISABLE_TOOL_DEFAULT_ANNOTATIONS, shortName=StandardArgumentDefinitions.DISABLE_TOOL_DEFAULT_ANNOTATIONS, doc="Disable all tool default annotations", optional=true)
+    public boolean disableToolDefaultAnnotaitons = false;
+
 }

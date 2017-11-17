@@ -1,75 +1,36 @@
 package org.broadinstitute.hellbender.cmdline.GATKPlugin;
 
 import com.google.common.annotations.VisibleForTesting;
-import htsjdk.samtools.SAMFileHeader;
-import htsjdk.variant.vcf.VCFHeader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineException;
 import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
-import org.broadinstitute.hellbender.engine.filters.ReadFilter;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
-import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.utils.Utils;
+import org.reflections.ReflectionUtils;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * A base class for descriptors for plugins that can be dynamically discovered by the
- * command line parser and specified as command line arguments. An instance of each
- * plugin descriptor to be used should be passed to the command line parser, and will
- * be queried to find the class and package names to search for all plugin classes
- * that should be discovered dynamically. The command line parser will find all such
- * classes, and delegate to the descriptor to obtain the corresponding plugin instance;
- * the object returned to the parser is then added to the parser's list of argument sources.
+ * A plugin descriptor for managing the dynamic discovery of both @{InfoFieldAnnotation} and @{GenotypeAnnotation} objects
+ * within the @{org.broadinstitute.hellbender.tools.walkers.annotator} package which handles integrating annotation specific
+ * arguments from the command line with tool specified defaults.
  *
- * Descriptors (sub)classes should have at least one @Argument used to accumulate the
- * user-specified instances of the plugin seen on the command line. Allowed values for
- * this argument are the simple class names of the discovered plugin subclasses.
- *
- * Plugin (sub)classes:
- *
- * - should subclass a common base class (the name of which is returned by the descriptor)
- * - may live in any one of the packages returned by the descriptor {@Link #getPackageNames},
- *   but must have a unique simple name to avoid command line name collisions.
- * - should contain @Arguments for any values they wish to collect. @Arguments may be
- *   optional or required. If required, the arguments are in effect "provisionally
- *   required" in that they are contingent on the specific plugin being specified on
- *   the command line; they will only be marked by the command line parser as missing
- *   if the they have not been specified on the command line, and the plugin class
- *   containing the plugin argument *has* been specified on the command line (as
- *   determined by the command line parser via a call to isDependentArgumentAllowed).
- *
- * NOTE: plugin class @Arguments that are marked "optional=false" should be not have a primitive
- * type, and should not have an initial value, as the command line parser will interpret these as
- * having been set even if they have not been specified on the command line. Conversely, @Arguments
- * that are optional=true should have an initial value, since they parser will not require them
- * to be set in the command line.
- *
- * The methods for each descriptor are called in the following order:
- *
- *  getPluginClass()/getPackageNames() - once when argument parsing begins (if the descriptor
- *  has been passed to the command line parser as a target descriptor)
- *
- *  getClassFilter() - once for each plugin subclass found
- *  getInstance() - once for each plugin subclass that isn't filtered out by getClassFilter
- *  validateDependentArgumentAllowed  - once for each plugin argument value that has been
- *  specified on the command line for a plugin that is controlled by this descriptor
- *
- *  validateArguments() - once when argument parsing is complete
- *  getAllInstances() - whenever the pluggable class consumer wants the resulting plugin instances
- *
- *  getAllowedValuesForDescriptorArgument is only called when the command line parser is constructing
- *  a help/usage message.
+ * Unlike @{GATKReadFilterPluginDescriptor} annotation order is not important and thus argument order is not guarinteed to be
+ * preserved in all cases, especially when group annotations are involved.
  */
 public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor<Annotation> {
-
     private static final String pluginPackageName = "org.broadinstitute.hellbender.tools.walkers.annotator";
     private static final Class<?> pluginBaseClass = org.broadinstitute.hellbender.tools.walkers.annotator.Annotation.class;
+
+    protected transient Logger logger = LogManager.getLogger(this.getClass());
 
     @VisibleForTesting
     @ArgumentCollection
@@ -83,18 +44,19 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
     // actual instances in case they have any additional state provided by the tool
     // when they were created
     private final Map<String, Annotation> toolDefaultAnnotations = new LinkedHashMap<>();
+    private final Set<String> toolDefaultGroups = new HashSet<>();
 
     // Set of dependent args for which we've seen values (requires predecessor)
     private final Set<String> requiredPredecessors = new HashSet<>();
 
-    private final Map<String, List<Annotation>> discoveredGroups = new HashMap<String, List<Annotation>>;
+    private final Map<String, List<Annotation>> discoveredGroups = new HashMap<>();
 
     /**
      * @param userArgs           Argument collection to control the exposure of the command line arguments.
      * @param toolDefaultFilters Default filters that may be supplied with arguments
      *                           on the command line. May be null.
      */
-    public GATKAnnotationPluginDescriptor(final VariantAnnotationArgumentCollection userArgs, final List<Annotation> toolDefaultFilters) {
+    public GATKAnnotationPluginDescriptor(final VariantAnnotationArgumentCollection userArgs, final List<Annotation> toolDefaultFilters, final List<String> toolDefaultGroups) {
         this.userArgs = userArgs;
         if (null != toolDefaultFilters) {
             toolDefaultFilters.forEach(f -> {
@@ -110,47 +72,56 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
                 toolDefaultAnnotations.put(className, f);
             });
         }
+        if (null != toolDefaultGroups) {
+            this.toolDefaultGroups.addAll(toolDefaultGroups);
+        }
     }
 
     /**
      * @param toolDefaultFilters Default filters that may be supplied with arguments
      *                           on the command line. May be null.
      */
-    public GATKAnnotationPluginDescriptor(final List<Annotation> toolDefaultFilters) {
-        this(new VariantAnnotationArgumentCollection(Collections.emptyList(),Collections.emptyList(),Collections.emptyList()), toolDefaultFilters);
+    public GATKAnnotationPluginDescriptor(final List<Annotation> toolDefaultFilters, final List<String> toolDefaultGroups) {
+        this(new VariantAnnotationArgumentCollection(Collections.emptyList(), Collections.emptyList(), Collections.emptyList()), toolDefaultFilters, toolDefaultGroups);
     }
 
     @Override
     public Predicate<Class<?>> getClassFilter() {
         return c -> {
-            // don't use the Annotation base class, it's inner classes, the CountingReadFilter,
-            // or the unit tests
+            // don't use the Annotation base class, it's inner classes, or the unit tests
             return !c.getName().equals(this.getPluginClass().getName()) &&
-//                    !c.getName().startsWith(CountingReadFilter.class.getName()) &&
-//                    !c.getName().startsWith(this.getPluginClass().getName() + "$") &&
+                    !Modifier.isAbstract(c.getModifiers()) &&
                     !c.getName().contains("UnitTest$");
         };
     }
 
     /**
      * Return a display name to identify this plugin to the user
+     *
      * @return A short user-friendly name for this plugin.
      */
     @Override
-    public String getDisplayName() { return StandardArgumentDefinitions.ANNOTATION_LONG_NAME; }
+    public String getDisplayName() {
+        return StandardArgumentDefinitions.ANNOTATION_LONG_NAME;
+    }
 
     /**
      * @return the class object for the base class of all plugins managed by this descriptor
      */
     @Override
-    public Class<?> getPluginClass() {return pluginBaseClass;}
+    public Class<?> getPluginClass() {
+        return pluginBaseClass;
+    }
 
     /**
      * A list of package names which will be searched for plugins managed by the descriptor.
+     *
      * @return
      */
     @Override
-    public List<String> getPackageNames() {return Collections.singletonList(pluginPackageName);};
+    public List<String> getPackageNames() {
+        return Collections.singletonList(pluginPackageName);
+    }
 
     /**
      * Return an instance of the specified pluggable class. The descriptor should
@@ -158,7 +129,7 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
      * through the descriptor's constructor) an instance of this plugin class.
      * The descriptor should maintain a list of these instances so they can later
      * be retrieved by {@link #getAllInstances}.
-     *
+     * <p>
      * In addition, implementations should recognize and reject any attempt to instantiate
      * a second instance of a plugin that has the same simple class name as another plugin
      * controlled by this descriptor (which can happen if they have different qualified names
@@ -199,21 +170,33 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
         // Add all filters to the allDiscoveredReadFilters list, even if the instance came from the
         // tool defaults list (we want the actual instances to be shared to preserve state)
         allDiscoveredAnnotations.put(simpleName, annot);
+
         Class<?>[] interfaces = annot.getClass().getInterfaces();
-        for (Class group : interfaces) {
-            System.out.println(interfaces);
-            for (Class<?> inter : interfaces) {
-                List<Annotation> list = discoveredGroups.containsValue(inter.getSimpleName())? discoveredGroups.get(inter.getSimpleName()): new ArrayList<>();
+        for (Class<?> inter : interfaces) {
+            // Following with how groups are currently defined and discovered, namely they are interfaces that
+            // extend Annotation. This might not be entirely desirable as it results in ReducibleAnnotation being
+            // a definable group even though this is not an entirely helpful list.
+            if ((inter != pluginBaseClass) && (pluginBaseClass.isAssignableFrom(inter))) {
+                List<Annotation> list = discoveredGroups.containsKey(inter.getSimpleName()) ? discoveredGroups.get(inter.getSimpleName()) : new ArrayList<>();
                 list.add(annot);
-                discoveredGroups.put(inter.getSimpleName(), discoveredGroups.containsValue(inter.getSimpleName()),)
+                discoveredGroups.put(inter.getSimpleName(), list);
+
+                // If its a valid group, check whether the tool requested that group and add it to default annotations
+                if (toolDefaultGroups.contains(inter.getSimpleName()) && !toolDefaultAnnotations.containsKey(simpleName)) {
+                    toolDefaultAnnotations.put(simpleName, annot);
+                }
             }
-            //TODO check what is actually being caught here
         }
 
         return annot;
-        //TODO this is going to do the group discovery, which will be smart about group=none and group=
     }
 
+    /**
+     * Return the allowed values for readFilterNames/disableReadFilter for use by the help system.
+     *
+     * @param longArgName long name of the argument for which help is requested
+     * @return
+     */
     @Override
     public Set<String> getAllowedValuesForDescriptorArgument(String longArgName) {
         if (longArgName.equals(StandardArgumentDefinitions.ANNOTATION_LONG_NAME)) {
@@ -226,39 +209,168 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
     }
 
     @Override
-    public boolean isDependentArgumentAllowed(Class<?> dependentClass) {
-        return false;
+    public boolean isDependentArgumentAllowed(final Class<?> predecessorClass) {
+        // Make sure the predecessor for a dependent argument was either specified on the command line or
+        // is a tool default, otherwise reject it.
+        // NOTE: This method is called by the CLP during parsing at the time the depended argument is seen
+        // on the command line. Even if this check passes at the time this method is called, its possible
+        // for the user to subsequently disable the required predecessor. That case is caught during final
+        // validation done by the validateArguments method.
+        String predecessorName = predecessorClass.getSimpleName();
+        boolean isAllowed = (userArgs.annotationsToUse.contains(predecessorName))
+                || (toolDefaultAnnotations.get(predecessorName) != null);
+        if (!isAllowed) {
+            // Need to check whether any of the annotations have been included in one of the group dependencies
+            // TODO an alternative would be to use ClassUtils.knownSubInterfaceSimpleNames(Annotation.class); to discover the groups ahead of time
+            for (String group : Stream.of(userArgs.annotationGroupsToUse, toolDefaultGroups)
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList())) {
+                if (discoveredGroups.containsKey(group)
+                        && discoveredGroups.get(group).stream().anyMatch(s -> s.getClass().getSimpleName().equals(predecessorName))) {
+                    isAllowed = true;
+                    break;
+                }
+            }
+        }
+        if (isAllowed) {
+            // Keep track of the ones we allow so we can validate later that they weren't subsequently disabled
+            requiredPredecessors.add(predecessorName);
+        }
+        return isAllowed;
     }
 
+    /**
+     * Validate the list of arguments and reduce the list of read filters to those
+     * actually seen on the command line. This is called by the command line parser
+     * after all arguments have been parsed. Tries to catch most cases where the user
+     * provides potentially confusing input.
+     */
     @Override
     public void validateArguments() throws CommandLineException {
-        //TODO implement similar validation as is done with the variant
-        //TODO this is where validation of the groups from the variant annotation engine comes into play
+        // throw if a tool default annotation group is invalid, this is the tool authors fault and should be a hard failure
+        if (!discoveredGroups.keySet().containsAll(toolDefaultGroups)) {
+            toolDefaultGroups.removeAll(discoveredGroups.keySet());
+            throw new GATKException(String.format("The tool requested annotation group(s) \"%s\" are invalid annotation groups", Utils.join("\", \"", toolDefaultGroups)));
+        }
+
+        // throw if a annotation is *enabled* more than once by the user
+        final Set<String> duplicateUserEnabledFilterNames = Utils.getDuplicatedItems(userArgs.annotationsToUse);
+        if (!duplicateUserEnabledFilterNames.isEmpty()) {
+            throw new CommandLineException.BadArgumentValue(
+                    String.format("The annotation(s) are enabled more than once: %s",
+                            Utils.join(", ", duplicateUserEnabledFilterNames)));
+        }
+
+        // throw if a annotation is *disabled* more than once by the user
+        final Set<String> duplicateDisabledUserFilterNames = Utils.getDuplicatedItems(userArgs.annotationsToExclude);
+        if (!duplicateDisabledUserFilterNames.isEmpty()) {
+            throw new CommandLineException.BadArgumentValue(
+                    String.format("The annotation(s) are disabled more than once: %s",
+                            Utils.join(", ", duplicateDisabledUserFilterNames)));
+        }
+
+        // throw if a annotation is both enabled *and* disabled by the user
+        final Set<String> enabledAndDisabled = new HashSet<>(userArgs.annotationsToUse);
+        enabledAndDisabled.retainAll(userArgs.annotationsToExclude);
+        if (!enabledAndDisabled.isEmpty()) {
+            final String badFiltersList = Utils.join(", ", enabledAndDisabled);
+            throw new CommandLineException(
+                    String.format("The annotation(s): %s are both enabled and disabled", badFiltersList));
+        }
+
+        // throw if a disabled annotation doesn't exist; warn if it wasn't enabled by the tool in the first place
+        userArgs.annotationsToExclude.forEach(s -> {
+            if (!allDiscoveredAnnotations.containsKey(s)) {
+                throw new CommandLineException.BadArgumentValue(String.format("Disabled filter (%s) does not exist", s));
+            } else if (!toolDefaultAnnotations.containsKey(s)) {
+                logger.warn(String.format("Disabled annotation (%s) is not enabled by this tool", s));
+            }
+        });
+
+        // warn if an annotation is both default and enabled by the user
+        final Set<String> redundantAnnots = new HashSet<>(toolDefaultAnnotations.keySet());
+        redundantAnnots.retainAll(userArgs.annotationsToUse);
+        redundantAnnots.forEach(
+                s -> {
+                    logger.warn(String.format("Redundant enabled annotation (%s) is enabled for this tool by default", s));
+                });
+
+        // warn if an annotation is both default and enabled by the user
+        final Set<String> redundantGroups = new HashSet<>(toolDefaultGroups);
+        redundantGroups.retainAll(userArgs.annotationGroupsToUse);
+        redundantGroups.forEach(
+                s -> {
+                    logger.warn(String.format("Redundant enabled annotation group (%s) is enabled for this tool by default", s));
+                });
+
+        // Throw if args were specified for a filter that was also disabled, or that was not enabled by the
+        // tool by default.
+        //
+        // Note that this is also checked during command line argument parsing, but needs to be checked again
+        // here. Whenever the command line parser sees a dependent argument on the command line, it delegates
+        // back to the descriptor's isDependentArgumentAllowed method to allow it to validate that the predecessor
+        // for that dependent argument has been supplied, either by a default read filter, or by an explicitly
+        // enabled read filter. However, its possible for the user to subsequently try to disable that
+        // predecessor, which is what we want to catch here.
+        //
+        userArgs.annotationsToExclude.forEach(s -> {
+            if (requiredPredecessors.contains(s)) {
+                String message = String.format("Values were supplied for (%s) that is also disabled", s);
+                if (toolDefaultAnnotations.containsKey(s)) {
+                    // NOTE: https://github.com/broadinstitute/barclay/issues/23
+                    // This is a special case to work around the issue where we can't really tell if the
+                    // predecessor was added as a result of a user-provided value, or a default value. The
+                    // CLP doesn't distinguish, so we only warn here for now.
+                    logger.warn(message);
+                } else {
+                    throw new CommandLineException(message);
+                }
+            }
+        });
+
+        // throw if an annotation name was specified that has no corresponding instance
+        userArgs.annotationsToUse.forEach(s -> {
+            Annotation trf = allDiscoveredAnnotations.get(s);
+            if (null == trf) {
+                if (!toolDefaultAnnotations.containsKey(s)) {
+                    throw new CommandLineException("Unrecognized annotation name: " + s);
+                }
+            }
+        });
+
+        // throw if a annotation name was specified that has no corresponding instance
+        userArgs.annotationGroupsToUse.forEach(s -> {
+            if (!discoveredGroups.containsKey(s)) {
+                throw new CommandLineException("Unrecognized annotation group name: " + s);
+            }
+        });
     }
 
     /**
      * Get the list of default plugins used for this instance of this descriptor. Used for help/doc generation.
-     *
+     * <p>
      * NOTE: this method does not account for disabled default filters and just return ALL default instances.
      * The refactored interface in Barclay changes it's contract to allows returning a list with only 'enabled' default
      * instances. We'll change the implementation when we integrate the updated interface.
      */
     @Override
-    public List<Object> getDefaultInstances() { return new ArrayList<>(toolDefaultAnnotations.values()); }
+    public List<Object> getDefaultInstances() {
+        return new ArrayList<>(toolDefaultAnnotations.values());
+    }
 
     /**
-     * Pass back the list of ReadFilter instances that were actually seen on the command line in the same
-     * order they were specified. Its possible for this to return a filter that was originally included
-     * in the list of tool defaults only in the case where the user also specifies it on the command line.
-     *
+     * Pass back the list of Annotation instances that were actually seen on the command line in the annotations
+     * originating from groups first, followed by individual annotaitons in order. Its possible for this to return
+     * a filter that was originally included in the list of tool defaults only in the case where the user also
+     * specifies it on the command line.
+     * <p>
      * NOTE: this method is somewhat misnamed in that it doesn't return ALL instances since it leaves out
      * default filters (Except as noted above). The refactored interface in Barclay renames this method and
      * changes it's contract. We'll change the implementation when we integrate the updated interface.
-     * TODO this needs to be commented to reflect its new behaviro
      */
     @Override
     public List<Annotation> getAllInstances() {
-        final ArrayList<Annotation> annotations = new ArrayList<>();
+        final LinkedHashSet<Annotation> annotations = new LinkedHashSet<>();
         userArgs.annotationGroupsToUse.forEach(s -> {
             List<Annotation> as = discoveredGroups.get(s);
             annotations.addAll(as);
@@ -267,98 +379,54 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
             Annotation rf = allDiscoveredAnnotations.get(s);
             annotations.add(rf);
         });
-        return annotations;
+        return new ArrayList<>(annotations);
     }
 
 
+    /**
+     * Return the class representing the instance of the plugin specified by {@code pluginName}
+     *
+     * @param pluginName Name of the plugin requested
+     * @return Class object for the plugin instance requested
+     */
     @Override
-    public Class<?> getClassForInstance(String pluginName) {
-        return null;
+    public Class<?> getClassForInstance(final String pluginName) {
+        return allDiscoveredAnnotations.get(pluginName).getClass();
     }
 
     /**
      * Merge the default filters with the users's command line read filter requests, then initialize
-     * the resulting filters.
+     * the resulting filters. Specifically, unless the user disables all tool default annotations it will
+     * first add all the tool enabled annotations which were not individually blocked by the user and then
+     * adds in annotations defined by the users specified groups, then individual annotations.
      *
-     * @param samHeader - a SAMFileHeader to use to initialize read filter instances
      * @return Single merged read filter.
      */
-    public final ReadFilter getMergedReadFilter(final SAMFileHeader samHeader) {
-        Utils.nonNull(samHeader);
-        return getMergedReadFilter(
-                samHeader,
-                ReadFilter::fromList
-        );
-    }
+    public Collection<Annotation> getMergedAnnotations() {
+        final SortedSet<Annotation> annotations = new TreeSet<>(Comparator.comparing(t -> t.getClass().getSimpleName()));
 
-//======================================================================================================================
-//Helper Methods
-
-    /**
-     * Determine if a particular ReadFilter was disabled on the command line, either directly of by disabling all
-     * tool defaults.
-     * @param filterName name of the filter to query.
-     * @return {@code true} if the name appears in the list of disabled filters, or is a tool default not provided by
-     * the user and all tool defaults are disabled; {@code false} otherwise.
-     */
-    public boolean isDisabledFilter(final String filterName) {
-        return userArgs.annotationsToExclude.contains(filterName);
-                //|| (userArgs.getDisableToolDefaultReadFilters() && !userArgs.getUserEnabledReadFilterNames().contains(filterName));
-    }//TODO not even close as an analogue
-
-    /**
-     * Merge the default filters with the users's command line read filter requests, then initialize
-     * the resulting filters.
-     *
-     * @param samHeader - a SAMFileHeader to use to initialize read filter instances
-     * @return Single merged counting read filter.
-     */
-    public final CountingReadFilter getMergedCountingReadFilter(final SAMFileHeader samHeader) {
-        Utils.nonNull(samHeader);
-        return getMergedReadFilter(
-                samHeader,
-                CountingReadFilter::fromList
-        );
-    }
-
-    /**
-     * Merge the default filters with the users's command line read filter requests, then initialize
-     * the resulting filters.
-     *
-     * @param samHeader a SAMFileHeader to initialize read filter instances. May not be null.
-     * @param aggregateFunction function to use to merge ReadFilters, usually ReadFilter::fromList. The function
-     *                          must return the ALLOW_ALL_READS filter wrapped in the appropriate type when passed
-     *                          a null or empty list.
-     * @param <T> extends ReadFilter, type returned by the wrapperFunction
-     * @return Single merged read filter.
-     */
-    public VariantAnnotatorEngine getAnnotationEngine(
-            final VCFHeader vcfHeader,
-            final BiFunction<List<Annotation>, VCFHeader, VariantAnnotatorEngine> aggregateFunction) {
-
-        Utils.nonNull(vcfHeader);
-        Utils.nonNull(aggregateFunction);
-
-        // start with the tool's default filters in the order they were specified, and remove any that were disabled
-        // on the command line
-        // if --disableToolDefaultReadFilters is specified, just initialize an empty list with initial capacity of user filters
-        final List<Annotation> finalAnnotations =
-                userArgs.annotationGroupsToUse.contains("none") ?//TODO maybe unify the "none" field to operate like the filters
-                        new ArrayList<>() :
-                        toolDefaultAnnotations.entrySet()
-                                .stream()
-                                .filter(e -> !isDisabledFilter(e.getKey()))
-                                .map(e -> e.getValue())
-                                .collect(Collectors.toList());
-
-        // now add in any additional filters enabled on the command line (preserving order)
-        final List<Annotation> clAnnotations = getAllInstances();
-        if (clAnnotations != null) {
-            clAnnotations.stream()
-                    .filter(f -> !finalAnnotations.contains(f)) // remove redundant filters
-                    .forEach(f -> finalAnnotations.add(f));
+        if (!userArgs.disableToolDefaultAnnotaitons) {
+            annotations.addAll(toolDefaultAnnotations.values().stream()
+                    .filter(t -> !userArgs.annotationsToExclude.contains(t.getClass().getSimpleName()))
+                    .collect(Collectors.toList()));
+        }
+        for (final Annotation annot : allDiscoveredAnnotations.values()) {
+            if (!userArgs.annotationsToExclude.contains(annot.getClass().getSimpleName())) {
+                //if any group matches requested groups, it's in
+                //TODO this reflection should be abstracted away to somewhere nicer
+                @SuppressWarnings("unchecked") final Set<Class<?>> annotationGroupsForT = ReflectionUtils.getAllSuperTypes(annot.getClass(), sup -> sup.isInterface() && discoveredGroups.keySet().contains(sup.getSimpleName()));
+                if (annotationGroupsForT.stream().anyMatch(iface -> userArgs.annotationGroupsToUse.contains(iface.getSimpleName()))) {
+                    if (!annotations.contains(annot)) {
+                        annotations.add(annot);
+                    }
+                }
+                // If the user explicitly requests an annotation then we want to override its tool-default configuration
+                if (userArgs.annotationsToUse.contains(annot.getClass().getSimpleName())) {
+                    annotations.add(annot);
+                }
+            }
         }
 
-        return aggregateFunction.apply(finalAnnotations, vcfHeader);
+        return annotations;
     }
 }

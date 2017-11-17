@@ -39,21 +39,21 @@ public final class VariantAnnotatorEngine {
     private Boolean expressionAlleleConcordance;
     private final Boolean useRawAnnotations;
 
-    private VariantAnnotatorEngine(final AnnotationManager annots,
-                                   final FeatureInput<VariantContext> dbSNPInput,
-                                   final List<FeatureInput<VariantContext>> featureInputs,
-                                   final boolean useRaw){
-        infoAnnotations = annots.createInfoFieldAnnotations();
-        genotypeAnnotations = annots.createGenotypeAnnotations();
-        variantOverlapAnnotator = initializeOverlapAnnotator(dbSNPInput, featureInputs);
-        reducibleKeys = new HashSet<>();
-        useRawAnnotations = useRaw;
-        for (InfoFieldAnnotation annot : infoAnnotations) {
-            if (annot instanceof ReducibleAnnotation) {
-                reducibleKeys.add(((ReducibleAnnotation) annot).getRawKeyName());
-            }
-        }
-    }
+//    private VariantAnnotatorEngine(final AnnotationManager annots,
+//                                   final FeatureInput<VariantContext> dbSNPInput,
+//                                   final List<FeatureInput<VariantContext>> featureInputs,
+//                                   final boolean useRaw){
+//        infoAnnotations = annots.createInfoFieldAnnotations();
+//        genotypeAnnotations = annots.createGenotypeAnnotations();
+//        variantOverlapAnnotator = initializeOverlapAnnotator(dbSNPInput, featureInputs);
+//        reducibleKeys = new HashSet<>();
+//        useRawAnnotations = useRaw;
+//        for (InfoFieldAnnotation annot : infoAnnotations) {
+//            if (annot instanceof ReducibleAnnotation) {
+//                reducibleKeys.add(((ReducibleAnnotation) annot).getRawKeyName());
+//            }
+//        }
+//    }
 
     /**
      * TODO comment this out
@@ -99,7 +99,7 @@ public final class VariantAnnotatorEngine {
                                                             final Boolean useRawAnnotations) {
         Utils.nonNull(annotationsToExclude, "annotationsToExclude is null");
         Utils.nonNull(comparisonFeatureInputs, "comparisonFeatureInputs is null");
-        return new VariantAnnotatorEngine(AnnotationManager.ofAllMinusExcluded(annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
+        return null;//new VariantAnnotatorEngine(AnnotationManager.ofAllMinusExcluded(annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
     }
 
     /**
@@ -123,7 +123,7 @@ public final class VariantAnnotatorEngine {
         Utils.nonNull(annotationsToUse, "annotationsToUse is null");
         Utils.nonNull(annotationsToExclude, "annotationsToExclude is null");
         Utils.nonNull(comparisonFeatureInputs, "comparisonFeatureInputs is null");
-        return new VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, false);
+        return null;//new VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, false);
     }
 
     /**
@@ -149,7 +149,7 @@ public final class VariantAnnotatorEngine {
         Utils.nonNull(annotationsToUse, "annotationsToUse is null");
         Utils.nonNull(annotationsToExclude, "annotationsToExclude is null");
         Utils.nonNull(comparisonFeatureInputs, "comparisonFeatureInputs is null");
-        return new VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
+        return null;//VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
     }
 
     /**
@@ -186,6 +186,16 @@ public final class VariantAnnotatorEngine {
         }
 
         return new VariantOverlapAnnotator(dbSNPInput, overlaps);
+    }
+
+    //TODO this is a hack and should not be tried at home kids
+    public void removeInfoAnnotation(Class<? extends InfoFieldAnnotation> toRemove) {
+        for (InfoFieldAnnotation annotation : infoAnnotations) {
+            if (annotation.getClass() == toRemove) {
+                infoAnnotations.remove(annotation);
+                return;
+            }
+        }
     }
 
     /**
@@ -319,6 +329,7 @@ public final class VariantAnnotatorEngine {
                                           final Predicate<VariantAnnotation> addAnnot) {
         Utils.nonNull(vc, "vc cannot be null");
         Utils.nonNull(features, "features cannot be null");
+        Utils.nonNull(addAnnot, "addAnnot cannot be null");
 
         // annotate genotypes, creating another new VC in the process
         final VariantContextBuilder builder = new VariantContextBuilder(vc);

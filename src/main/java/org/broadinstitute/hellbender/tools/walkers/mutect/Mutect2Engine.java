@@ -14,6 +14,7 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypingOutputMode;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
@@ -151,6 +152,13 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
         filters.add(new WellformedReadFilter());
 
         return filters;
+    }
+
+    /**
+     * @return the default set of read filters for use with Mutect2
+     */
+    public static List<String> getStandardMutect2AnnotationGroups() {
+        return Collections.singletonList(StandardMutectAnnotation.class.getSimpleName());
     }
 
     public void writeHeader(final VariantContextWriter vcfWriter, final SAMSequenceDictionary sequenceDictionary,

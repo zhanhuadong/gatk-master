@@ -171,10 +171,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
         initializeActiveRegionEvaluationGenotyperEngine();
 
-        if (annotationEngine == null) {
-            annotationEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(hcArgs.variantAnnotationArgumentCollection, hcArgs.dbsnp.dbsnp, hcArgs.comps, emitReferenceConfidence());
-
-        }
+        //TODO this is getting pulled out but must ensure that it is indeed done
+//        if (annotationEngine == null) {
+//            annotationEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(hcArgs.variantAnnotationArgumentCollection, hcArgs.dbsnp.dbsnp, hcArgs.comps, emitReferenceConfidence());
+//
+//        }
 
         genotypingEngine = new HaplotypeCallerGenotypingEngine(hcArgs, samplesList, FixedAFCalculatorProvider.createThreadSafeProvider(hcArgs), ! hcArgs.doNotRunPhysicalPhasing);
         genotypingEngine.setAnnotationEngine(annotationEngine);
@@ -225,14 +226,13 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             hcArgs.genotypeArgs.STANDARD_CONFIDENCE_FOR_CALLING = -0.0;
 
-            // also, we don't need to output several of the annotations
-            hcArgs.variantAnnotationArgumentCollection.annotationsToExclude.add(ChromosomeCounts.class.getSimpleName());
-            hcArgs.variantAnnotationArgumentCollection.annotationsToExclude.add(FisherStrand.class.getSimpleName());
-            hcArgs.variantAnnotationArgumentCollection.annotationsToExclude.add(StrandOddsRatio.class.getSimpleName());
-            hcArgs.variantAnnotationArgumentCollection.annotationsToExclude.add(QualByDepth.class.getSimpleName());
+            //TODO this should probably be changed for a more elegant solution but this changes the least amount compared to current (Note this wouldn't apply for spark anyway)
+            //TODO for posterity the problem is that there is no way to negatively specify classes when we provide tool defaults to the AnnotaiotnPlugin
+            annotationEngine.removeInfoAnnotation(ChromosomeCounts.class);
+            annotationEngine.removeInfoAnnotation(FisherStrand.class);
+            annotationEngine.removeInfoAnnotation(StrandOddsRatio.class);
+            annotationEngine.removeInfoAnnotation(QualByDepth.class);
 
-            // but we definitely want certain other ones
-            hcArgs.variantAnnotationArgumentCollection.annotationsToUse.add(StrandBiasBySample.class.getSimpleName());
             logger.info("Standard Emitting and Calling confidence set to 0.0 for reference-model confidence output");
             if ( ! hcArgs.annotateAllSitesWithPLs ) {
                 logger.info("All sites annotated with PLs forced to true for reference-model confidence output");

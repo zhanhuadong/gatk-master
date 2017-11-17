@@ -3,6 +3,9 @@ package org.broadinstitute.hellbender.engine;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFHeader;
+import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
+import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKAnnotationPluginDescriptor;
+import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
 import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.VariantFilter;
@@ -14,6 +17,8 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Spliterator;
 import java.util.function.BiFunction;
@@ -164,12 +169,39 @@ public abstract class VariantWalkerBase extends GATKTool {
      * @return Single merged read filter.
      */
     public final VariantAnnotatorEngine getVariantAnnotatorEngine(final VCFHeader vcfHeader, final boolean useRaw) {
-        Utils.nonNull(vcfHeader);
-        return getVariantAnnotatorEngine(
-                vcfHeader,
-                (annotations, header) -> {
-                    return new VariantAnnotatorEngine(annotations, );
-                }
-        );
+//        Utils.nonNull(vcfHeader);
+//        return getVariantAnnotatorEngine(
+//                vcfHeader,
+//                (annotations, header) -> {
+//                    return new VariantAnnotatorEngine(annotations, );
+//                }
+//        );
+        return null;
     }
+
+    /**
+     * List of required annotations by the tool
+     */
+    public List<Annotation> getDefaultAnnotatations() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * List of required annotation groups by the tool
+     */
+    public List<String> getDefaultAnnotationGroups() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Return the list of GATKCommandLinePluginDescriptors to be used for this tool.
+     * Uses the read filter plugin.
+     */
+    @Override
+    public List<? extends CommandLinePluginDescriptor<?>> getPluginDescriptors() {
+        List<CommandLinePluginDescriptor<?>> descriptors = new ArrayList<>(super.getPluginDescriptors());
+        descriptors.add(new GATKAnnotationPluginDescriptor(getDefaultAnnotatations(), getDefaultAnnotationGroups()));
+        return descriptors;
+    }
+
 }
