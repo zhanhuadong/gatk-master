@@ -13,6 +13,7 @@ import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.VariantProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
 
@@ -237,7 +238,8 @@ public final class Mutect2 extends AssemblyRegionWalker {
 
     @Override
     public void onTraversalStart() {
-        m2Engine = new Mutect2Engine(MTAC, createOutputBamIndex, createOutputBamMD5, getHeaderForReads(), referenceArguments.getReferenceFileName());
+        VariantAnnotatorEngine annotatorEngine = new VariantAnnotatorEngine(getAnnotationsToUse(), MTAC.dbsnp.dbsnp, MTAC.comps, false);
+        m2Engine = new Mutect2Engine(MTAC, createOutputBamIndex, createOutputBamMD5, getHeaderForReads(), referenceArguments.getReferenceFileName(), annotatorEngine);
         final SAMSequenceDictionary sequenceDictionary = getHeaderForReads().getSequenceDictionary();
         vcfWriter = createVCFWriter(outputVCF);
         m2Engine.writeHeader(vcfWriter, sequenceDictionary, getDefaultToolVCFHeaderLines());

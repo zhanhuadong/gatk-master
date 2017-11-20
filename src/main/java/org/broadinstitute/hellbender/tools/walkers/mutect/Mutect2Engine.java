@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.StandardMutectAnnotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotator;
 import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.tools.walkers.genotyper.GenotypingOutputMode;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.*;
@@ -93,12 +94,13 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
      * @param header header for the reads
      * @param reference path to the reference
      */
-    public Mutect2Engine(final M2ArgumentCollection MTAC, final boolean createBamOutIndex, final boolean createBamOutMD5, final SAMFileHeader header, final String reference ) {
+    public Mutect2Engine(final M2ArgumentCollection MTAC, final boolean createBamOutIndex, final boolean createBamOutMD5, final SAMFileHeader header, final String reference, final VariantAnnotatorEngine annotatorEngine) {
         this.MTAC = Utils.nonNull(MTAC);
         this.header = Utils.nonNull(header);
         Utils.nonNull(reference);
         referenceReader = AssemblyBasedCallerUtils.createReferenceReader(reference);
         aligner = SmithWatermanAligner.getAligner(MTAC.smithWatermanImplementation);
+        annotationEngine = annotatorEngine;
         initialize(createBamOutIndex, createBamOutMD5);
     }
 
@@ -112,11 +114,6 @@ public final class Mutect2Engine implements AssemblyRegionEvaluator {
             throw new UserException.BadInput("BAM header sample names " + samplesList.asListOfSamples() + "does not contain given normal" +
                     " sample name " + MTAC.normalSampleName);
         }
-
-        annotationEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(MTAC.variantAnnotationArgumentCollection,
-                MTAC.dbsnp.dbsnp,
-                MTAC.comps,
-                false);
 
         assemblyEngine = AssemblyBasedCallerUtils.createReadThreadingAssembler(MTAC);
         likelihoodCalculationEngine = AssemblyBasedCallerUtils.createLikelihoodCalculationEngine(MTAC.likelihoodArgs);

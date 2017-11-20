@@ -126,53 +126,53 @@ public final class VariantAnnotatorEngine {
         return null;//new VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, false);
     }
 
-    /**
-     * Makes the engine for given annotation types and groups (minus the excluded ones).
-     * @param annotationGroupsToUse list of annotations groups to include
-     * @param annotationsToUse     list of of annotations to include
-     * @param annotationsToExclude list of annotations to exclude
-     * @param dbSNPInput input for variants from a known set from DbSNP or null if not provided.
-     *                   The annotation engine will mark variants overlapping anything in this set using {@link htsjdk.variant.vcf.VCFConstants#DBSNP_KEY}.
-     * @param comparisonFeatureInputs list of inputs with known variants.
-     *                   The annotation engine will mark variants overlapping anything in those sets using the name given by {@link FeatureInput#getName()}.
-     *                   Note: the DBSNP FeatureInput should be passed in separately, and not as part of this List - an GATKException will be thrown otherwise.
-     *                   Note: there are no non-DBSNP comparison FeatureInputs an empty List should be passed in here, rather than null.
-     * @param useRawAnnotations  Specify whether the annotation engine will attempt to output raw annotations for reducible annotations
-     */
-    public static VariantAnnotatorEngine ofSelectedMinusExcluded(final List<String> annotationGroupsToUse,
-                                                                 final List<String> annotationsToUse,
-                                                                 final List<String> annotationsToExclude,
-                                                                 final FeatureInput<VariantContext> dbSNPInput,
-                                                                 final List<FeatureInput<VariantContext>> comparisonFeatureInputs,
-                                                                 final Boolean useRawAnnotations) {
-        Utils.nonNull(annotationGroupsToUse, "annotationGroupsToUse is null");
-        Utils.nonNull(annotationsToUse, "annotationsToUse is null");
-        Utils.nonNull(annotationsToExclude, "annotationsToExclude is null");
-        Utils.nonNull(comparisonFeatureInputs, "comparisonFeatureInputs is null");
-        return null;//VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
-    }
+//    /**
+//     * Makes the engine for given annotation types and groups (minus the excluded ones).
+//     * @param annotationGroupsToUse list of annotations groups to include
+//     * @param annotationsToUse     list of of annotations to include
+//     * @param annotationsToExclude list of annotations to exclude
+//     * @param dbSNPInput input for variants from a known set from DbSNP or null if not provided.
+//     *                   The annotation engine will mark variants overlapping anything in this set using {@link htsjdk.variant.vcf.VCFConstants#DBSNP_KEY}.
+//     * @param comparisonFeatureInputs list of inputs with known variants.
+//     *                   The annotation engine will mark variants overlapping anything in those sets using the name given by {@link FeatureInput#getName()}.
+//     *                   Note: the DBSNP FeatureInput should be passed in separately, and not as part of this List - an GATKException will be thrown otherwise.
+//     *                   Note: there are no non-DBSNP comparison FeatureInputs an empty List should be passed in here, rather than null.
+//     * @param useRawAnnotations  Specify whether the annotation engine will attempt to output raw annotations for reducible annotations
+//     */
+//    public static VariantAnnotatorEngine ofSelectedMinusExcluded(final List<String> annotationGroupsToUse,
+//                                                                 final List<String> annotationsToUse,
+//                                                                 final List<String> annotationsToExclude,
+//                                                                 final FeatureInput<VariantContext> dbSNPInput,
+//                                                                 final List<FeatureInput<VariantContext>> comparisonFeatureInputs,
+//                                                                 final Boolean useRawAnnotations) {
+//        Utils.nonNull(annotationGroupsToUse, "annotationGroupsToUse is null");
+//        Utils.nonNull(annotationsToUse, "annotationsToUse is null");
+//        Utils.nonNull(annotationsToExclude, "annotationsToExclude is null");
+//        Utils.nonNull(comparisonFeatureInputs, "comparisonFeatureInputs is null");
+//        return null;//VariantAnnotatorEngine(AnnotationManager.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
+//    }
 
-    /**
-     * An overload of {@link org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine#ofSelectedMinusExcluded ofSelectedMinusExcluded}
-     * except that it accepts a {@link VariantAnnotationArgumentCollection} as input.
-     * @param argumentCollection            VariantAnnotationArgumentCollection containing requested annotations.
-     * @param dbSNPInput                    input for variants from a known set from DbSNP or null if not provided.
-     *                   The annotation engine will mark variants overlapping anything in this set using {@link htsjdk.variant.vcf.VCFConstants#DBSNP_KEY}.
-     * @param comparisonFeatureInputs list of inputs with known variants.
-     *                   The annotation engine will mark variants overlapping anything in those sets using the name given by {@link FeatureInput#getName()}.
-     *                   Note: the DBSNP FeatureInput should be passed in separately, and not as part of this List - an GATKException will be thrown otherwise.
-     *                   Note: there are no non-DBSNP comparison FeatureInputs an empty List should be passed in here, rather than null.
-     * @return a VariantAnnotatorEngine initialized with the requested annotations
-     */
-    public static VariantAnnotatorEngine ofSelectedMinusExcluded(final VariantAnnotationArgumentCollection argumentCollection,
-                                                                 final FeatureInput<VariantContext> dbSNPInput,
-                                                                 final List<FeatureInput<VariantContext>> comparisonFeatureInputs,
-                                                                 final Boolean useRawAnnotations) {
-        return ofSelectedMinusExcluded(argumentCollection.annotationGroupsToUse,
-                argumentCollection.annotationsToUse,
-                argumentCollection.annotationsToExclude,
-                dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
-    }
+//    /**
+//     * An overload of {@link org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine#ofSelectedMinusExcluded ofSelectedMinusExcluded}
+//     * except that it accepts a {@link VariantAnnotationArgumentCollection} as input.
+//     * @param argumentCollection            VariantAnnotationArgumentCollection containing requested annotations.
+//     * @param dbSNPInput                    input for variants from a known set from DbSNP or null if not provided.
+//     *                   The annotation engine will mark variants overlapping anything in this set using {@link htsjdk.variant.vcf.VCFConstants#DBSNP_KEY}.
+//     * @param comparisonFeatureInputs list of inputs with known variants.
+//     *                   The annotation engine will mark variants overlapping anything in those sets using the name given by {@link FeatureInput#getName()}.
+//     *                   Note: the DBSNP FeatureInput should be passed in separately, and not as part of this List - an GATKException will be thrown otherwise.
+//     *                   Note: there are no non-DBSNP comparison FeatureInputs an empty List should be passed in here, rather than null.
+//     * @return a VariantAnnotatorEngine initialized with the requested annotations
+//     */
+//    public static VariantAnnotatorEngine ofSelectedMinusExcluded(final VariantAnnotationArgumentCollection argumentCollection,
+//                                                                 final FeatureInput<VariantContext> dbSNPInput,
+//                                                                 final List<FeatureInput<VariantContext>> comparisonFeatureInputs,
+//                                                                 final Boolean useRawAnnotations) {
+//        return ofSelectedMinusExcluded(argumentCollection.annotationGroupsToUse,
+//                argumentCollection.annotationsToUse,
+//                argumentCollection.annotationsToExclude,
+//                dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
+//    }
     private VariantOverlapAnnotator initializeOverlapAnnotator(final FeatureInput<VariantContext> dbSNPInput, final List<FeatureInput<VariantContext>> featureInputs) {
         final Map<FeatureInput<VariantContext>, String> overlaps = new LinkedHashMap<>();
         for ( final FeatureInput<VariantContext> fi : featureInputs) {

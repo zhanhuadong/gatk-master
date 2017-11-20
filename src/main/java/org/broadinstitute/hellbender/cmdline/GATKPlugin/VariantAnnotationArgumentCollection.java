@@ -60,4 +60,16 @@ public class VariantAnnotationArgumentCollection implements Serializable {
     @Argument(fullName= StandardArgumentDefinitions.DISABLE_TOOL_DEFAULT_ANNOTATIONS, shortName=StandardArgumentDefinitions.DISABLE_TOOL_DEFAULT_ANNOTATIONS, doc="Disable all tool default annotations", optional=true)
     public boolean disableToolDefaultAnnotaitons = false;
 
+    /**
+     * You can use the -AX argument in combination with this one to exclude specific annotations. Note that some
+     * annotations may not be actually applied if they are not applicable to the data provided or if they are
+     * unavailable to the tool (e.g. there are several annotations that are currently not hooked up to
+     * HaplotypeCaller). At present no error or warning message will be provided, the annotation will simply be
+     * skipped silently. You can check the output VCF header to see which annotations were actually applied (although
+     * this does not guarantee that the annotation was applied to all records in the VCF, since some annotations have
+     * additional requirements, e.g. minimum number of samples or heterozygous sites only -- see the documentation
+     * for individual annotations' requirements).
+     */
+    @Argument(fullName="useAllAnnotations", shortName="all", doc="Use all possible annotations (not for the faint of heart)", optional=true)
+    protected Boolean USE_ALL_ANNOTATIONS = false;
 }

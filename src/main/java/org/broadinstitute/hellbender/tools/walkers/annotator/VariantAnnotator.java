@@ -210,12 +210,8 @@ public class VariantAnnotator extends VariantWalker {
         // get the list of all sample names from the variant VCF input rod, if applicable
         final  List<String> samples = getHeaderForVariants().getGenotypeSamples(); // TODO right samples?
         variantSamples = new IndexedSampleList(samples);
-
-        if ( USE_ALL_ANNOTATIONS ) {
-            annotatorEngine = VariantAnnotatorEngine.ofAllMinusExcluded(variantAnnotationArgumentCollection.annotationsToExclude, dbsnp.dbsnp, comps, false);
-        } else {
-            annotatorEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(variantAnnotationArgumentCollection, dbsnp.dbsnp, comps, false);
-        }
+        
+        annotatorEngine = new VariantAnnotatorEngine(getAnnotationsToUse(), dbsnp.dbsnp, comps, false);
         //TODO add expressions?
         annotatorEngine.addExpressions(expressionsToUse, resources, expressionAlleleConcordance );
 

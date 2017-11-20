@@ -77,15 +77,6 @@ public final class CombineGVCFs extends MultiVariantWalkerGroupedOnStart {
     private SAMSequenceDictionary sequenceDictionary;
     private ReferenceConfidenceVariantContextMerger referenceConfidenceVariantContextMerger;
 
-    /**
-     * Which groups of annotations to add to the output VCF file.
-     */
-    @ArgumentCollection
-    public VariantAnnotationArgumentCollection variantAnnotationArgumentCollection = new VariantAnnotationArgumentCollection(
-            Arrays.asList(StandardAnnotation.class.getSimpleName()),
-            Collections.emptyList(),
-            Collections.emptyList());
-
     @Argument(fullName= StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName=StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
             doc="The combined GVCF output file", optional=false)
@@ -203,7 +194,7 @@ public final class CombineGVCFs extends MultiVariantWalkerGroupedOnStart {
     @Override
     public void onTraversalStart() {
         // create the annotation engine
-        annotationEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(variantAnnotationArgumentCollection, dbsnp.dbsnp, Collections.emptyList());
+        annotationEngine = new VariantAnnotatorEngine(getAnnotationsToUse(), dbsnp.dbsnp, Collections.emptyList(), false);
 
         vcfWriter = getVCFWriter();
 

@@ -135,6 +135,11 @@ public final class GenotypeGVCFs extends VariantWalker {
     }
 
     @Override
+    public List<String> getDefaultAnnotationGroups() {
+        return Arrays.asList(StandardAnnotation.class.getSimpleName());
+    }
+
+    @Override
     public void onTraversalStart() {
         final VCFHeader inputVCFHeader = getHeaderForVariants();
 
@@ -148,7 +153,7 @@ public final class GenotypeGVCFs extends VariantWalker {
 
         final SampleList samples = new IndexedSampleList(inputVCFHeader.getGenotypeSamples()); //todo should this be getSampleNamesInOrder?
 
-        annotationEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(variantAnnotationArgumentCollection, dbsnp.dbsnp, Collections.emptyList(), false);
+        annotationEngine = new VariantAnnotatorEngine(getAnnotationsToUse(), dbsnp.dbsnp, Collections.emptyList(), false);
 
         // We only want the engine to generate the AS_QUAL key if we are using AlleleSpecific annotations.
         genotypingEngine = new MinimalGenotypingEngine(createUAC(), samples, new GeneralPloidyFailOverAFCalculatorProvider(genotypeArgs), annotationEngine.isRequestedReducibleRawKey(GATKVCFConstants.AS_QUAL_KEY));

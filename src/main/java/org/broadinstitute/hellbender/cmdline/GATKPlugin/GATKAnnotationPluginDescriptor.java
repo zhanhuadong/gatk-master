@@ -1,14 +1,17 @@
 package org.broadinstitute.hellbender.cmdline.GATKPlugin;
 
 import com.google.common.annotations.VisibleForTesting;
+import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLineException;
 import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
+import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
+import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
 import org.broadinstitute.hellbender.utils.Utils;
 import org.reflections.ReflectionUtils;
 
@@ -412,21 +415,50 @@ public class GATKAnnotationPluginDescriptor  extends CommandLinePluginDescriptor
         }
         for (final Annotation annot : allDiscoveredAnnotations.values()) {
             if (!userArgs.annotationsToExclude.contains(annot.getClass().getSimpleName())) {
-                //if any group matches requested groups, it's in
-                //TODO this reflection should be abstracted away to somewhere nicer
-                @SuppressWarnings("unchecked") final Set<Class<?>> annotationGroupsForT = ReflectionUtils.getAllSuperTypes(annot.getClass(), sup -> sup.isInterface() && discoveredGroups.keySet().contains(sup.getSimpleName()));
-                if (annotationGroupsForT.stream().anyMatch(iface -> userArgs.annotationGroupsToUse.contains(iface.getSimpleName()))) {
-                    if (!annotations.contains(annot)) {
+                if (userArgs.USE_ALL_ANNOTATIONS) {
+                    annotations.add(annot);
+                } else {
+                    //if any group matches requested groups, it's in
+                    //TODO this reflection should be abstracted away to somewhere nicer
+                    @SuppressWarnings("unchecked") final Set<Class<?>> annotationGroupsForT = ReflectionUtils.getAllSuperTypes(annot.getClass(), sup -> sup.isInterface() && discoveredGroups.keySet().contains(sup.getSimpleName()));
+                    if (annotationGroupsForT.stream().anyMatch(iface -> userArgs.annotationGroupsToUse.contains(iface.getSimpleName()))) {
+                        if (!annotations.contains(annot)) {
+                            annotations.add(annot);
+                        }
+                    }
+                    // If the user explicitly requests an annotation then we want to override its tool-default configuration
+                    if (userArgs.annotationsToUse.contains(annot.getClass().getSimpleName())) {
                         annotations.add(annot);
                     }
-                }
-                // If the user explicitly requests an annotation then we want to override its tool-default configuration
-                if (userArgs.annotationsToUse.contains(annot.getClass().getSimpleName())) {
-                    annotations.add(annot);
                 }
             }
         }
 
         return annotations;
+    }
+
+//======================================================================================================================
+// Methods to be used for testing purposes
+//======================================================================================================================
+    /**
+     * To be used primarily for testing purposes, this allows one to retrieve annotations
+     * @param annotationsToExclude list of annotations to exclude (pass an empty list to indicate that there are no exclusions)
+     * @param dbSNPInput input for variants from a known set from DbSNP or null if not provided.
+     *                   The annotation engine will mark variants overlapping anything in this set using {@link htsjdk.variant.vcf.VCFConstants#DBSNP_KEY}.
+     * @param comparisonFeatureInputs list of inputs with known variants.
+     *                   The annotation engine will mark variants overlapping anything in those sets using the name given by {@link FeatureInput#getName()}.
+     *                   Note: the DBSNP FeatureInput should be passed in separately, and not as part of this List - an GATKException will be thrown otherwise.
+     *                   Note: there are no non-DBSNP comparison FeatureInputs an empty List should be passed in here, rather than null.
+     */
+    public static VariantAnnotatorEngine ofAllMinusExcluded(final List<String> annotationsToExclude,
+                                                            final FeatureInput<VariantContext> dbSNPInput,
+                                                            final List<FeatureInput<VariantContext>> comparisonFeatureInputs,
+                                                            final Boolean useRawAnnotations) {
+        Utils.nonNull(annotationsToExclude, "annotationsToExclude is null");
+        Utils.nonNull(comparisonFeatureInputs, "comparisonFeatureInputs is null");
+       // new GATKAnnotationPluginDescriptor(, Collections.singletonList("all"));
+
+
+        return null; ///new VariantAnnotatorEngine(AnnotationManager.ofAllMinusExcluded(annotationsToExclude), dbSNPInput, comparisonFeatureInputs, useRawAnnotations);
     }
 }

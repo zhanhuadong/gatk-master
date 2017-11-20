@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Represents an annotation that is computed for a single genotype.
  */
-public abstract class GenotypeAnnotation extends VariantAnnotation implements Annotation{
+public abstract class GenotypeAnnotation extends VariantAnnotation{
 
     /**
      * Computes the annotation for the given genotype and the likelihoods per read.
