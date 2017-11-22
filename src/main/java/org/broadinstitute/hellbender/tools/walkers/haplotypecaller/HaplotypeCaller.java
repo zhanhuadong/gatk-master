@@ -196,9 +196,6 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
     }
 
     @Override
-    public List<Annotation> getDefaultAnnotations() { return Collections.singletonList(new StrandBiasBySample());}
-
-    @Override
     public List<String> getDefaultAnnotationGroups() { return Arrays.asList(StandardAnnotation.class.getSimpleName(), StandardHCAnnotation.class.getSimpleName());}
 
     @Override

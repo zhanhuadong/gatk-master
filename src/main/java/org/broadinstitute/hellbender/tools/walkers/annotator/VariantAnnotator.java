@@ -128,15 +128,6 @@ public class VariantAnnotator extends VariantWalker {
     protected File outputFile;
 
     /**
-     * See the --list argument to view available annotations.
-     */
-    @ArgumentCollection
-    public VariantAnnotationArgumentCollection variantAnnotationArgumentCollection = new VariantAnnotationArgumentCollection(
-            Collections.emptyList(),
-            Collections.emptyList(),
-            Collections.emptyList());
-
-    /**
      * This option enables you to add annotations from one VCF to another.
      *
      * For example, if you want to annotate your callset with the AC field value from a VCF file named
@@ -157,19 +148,6 @@ public class VariantAnnotator extends VariantWalker {
      */
     @Argument(fullName="resourceAlleleConcordance", shortName="rac", doc="Check for allele concordances when using an external resource VCF file", optional=true)
     protected Boolean expressionAlleleConcordance = false;
-
-    /**
-     * You can use the -XL argument in combination with this one to exclude specific annotations.Note that some
-     * annotations may not be actually applied if they are not applicable to the data provided or if they are
-     * unavailable to the tool (e.g. there are several annotations that are currently not hooked up to
-     * HaplotypeCaller). At present no error or warning message will be provided, the annotation will simply be
-     * skipped silently. You can check the output VCF header to see which annotations were actually applied (although
-     * this does not guarantee that the annotation was applied to all records in the VCF, since some annotations have
-     * additional requirements, e.g. minimum number of samples or heterozygous sites only -- see the documentation
-     * for individual annotations' requirements).
-     */
-    @Argument(fullName="useAllAnnotations", shortName="all", doc="Use all possible annotations (not for the faint of heart)", optional=true)
-    protected Boolean USE_ALL_ANNOTATIONS = false;
 
     /**
      * Note that the --list argument requires a fully resolved and correct command-line to work. As an alternative,

@@ -249,10 +249,10 @@ public abstract class GATKTool extends CommandLineProgram {
      * Multiple filters can be composed by using {@link org.broadinstitute.hellbender.engine.filters.ReadFilter}
      * composition methods.
      */
-    public List<Annotation> getAnnotationsToUse(){
+    public Collection<Annotation> getAnnotationsToUse(){
         final GATKAnnotationPluginDescriptor readFilterPlugin =
                 getCommandLineParser().getPluginDescriptor(GATKAnnotationPluginDescriptor.class);
-        return readFilterPlugin.getAllInstances();
+        return readFilterPlugin.getMergedAnnotations();
     }
 
     /**

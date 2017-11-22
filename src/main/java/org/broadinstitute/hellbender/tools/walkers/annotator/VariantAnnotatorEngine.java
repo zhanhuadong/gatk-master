@@ -11,6 +11,7 @@ import org.broadinstitute.hellbender.engine.FeatureInput;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.spark.sv.utils.Strand;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.ReducibleAnnotation;
 import org.broadinstitute.hellbender.tools.walkers.annotator.allelespecific.ReducibleAnnotationData;
 import org.broadinstitute.hellbender.utils.ClassUtils;
@@ -58,7 +59,7 @@ public final class VariantAnnotatorEngine {
     /**
      * TODO comment this out
      */
-    public VariantAnnotatorEngine(final List<Annotation> annotationList,
+    public VariantAnnotatorEngine(final Collection<Annotation> annotationList,
                                    final FeatureInput<VariantContext> dbSNPInput,
                                    final List<FeatureInput<VariantContext>> featureInputs,
                                    final boolean useRaw){
@@ -188,14 +189,24 @@ public final class VariantAnnotatorEngine {
         return new VariantOverlapAnnotator(dbSNPInput, overlaps);
     }
 
+    /**
+     * The following methods allow the ability to modify the VariantAnnotatorEngines list of annotations after construction.
+     * This is convenient in the case where a tool needs to conditionally modify the default annotations based on parsed
+     * user input which is determined after the tool has supplied a list annotation plugin descriptor.
+     *
+     * @param toRemove annotation to add toor remove from the variant annotator engine
+     */
     //TODO this is a hack and should not be tried at home kids
-    public void removeInfoAnnotation(Class<? extends InfoFieldAnnotation> toRemove) {
+    public void removeAnnotation(Class<? extends InfoFieldAnnotation> toRemove) {
         for (InfoFieldAnnotation annotation : infoAnnotations) {
             if (annotation.getClass() == toRemove) {
                 infoAnnotations.remove(annotation);
                 return;
             }
         }
+    }
+    public void addAnnotation(GenotypeAnnotation toAdd) {
+        genotypeAnnotations.add(toAdd);
     }
 
     /**

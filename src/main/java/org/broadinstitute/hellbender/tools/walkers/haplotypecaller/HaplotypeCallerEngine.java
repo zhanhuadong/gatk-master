@@ -37,7 +37,6 @@ import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
 import org.broadinstitute.hellbender.utils.haplotype.HaplotypeBAMWriter;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.read.ReadUtils;
-import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanJavaAligner;
 import org.broadinstitute.hellbender.utils.smithwaterman.SmithWatermanAligner;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
@@ -228,10 +227,12 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             //TODO this should probably be changed for a more elegant solution but this changes the least amount compared to current (Note this wouldn't apply for spark anyway)
             //TODO for posterity the problem is that there is no way to negatively specify classes when we provide tool defaults to the AnnotaiotnPlugin
-            annotationEngine.removeInfoAnnotation(ChromosomeCounts.class);
-            annotationEngine.removeInfoAnnotation(FisherStrand.class);
-            annotationEngine.removeInfoAnnotation(StrandOddsRatio.class);
-            annotationEngine.removeInfoAnnotation(QualByDepth.class);
+            annotationEngine.removeAnnotation(ChromosomeCounts.class);
+            annotationEngine.removeAnnotation(FisherStrand.class);
+            annotationEngine.removeAnnotation(StrandOddsRatio.class);
+            annotationEngine.removeAnnotation(QualByDepth.class);
+
+            annotationEngine.addAnnotation(new StrandBiasBySample());
 
             logger.info("Standard Emitting and Calling confidence set to 0.0 for reference-model confidence output");
             if ( ! hcArgs.annotateAllSitesWithPLs ) {

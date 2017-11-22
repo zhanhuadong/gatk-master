@@ -95,12 +95,6 @@ public final class GenotypeGVCFs extends VariantWalker {
     @ArgumentCollection
     private GenotypeCalculationArgumentCollection genotypeArgs = new GenotypeCalculationArgumentCollection();
 
-    @ArgumentCollection
-    private final VariantAnnotationArgumentCollection variantAnnotationArgumentCollection = new VariantAnnotationArgumentCollection(
-            Arrays.asList(StandardAnnotation.class.getSimpleName()),
-            Collections.emptyList(),
-            Collections.emptyList());
-
     /**
      * This option can only be activated if intervals are specified.
      */

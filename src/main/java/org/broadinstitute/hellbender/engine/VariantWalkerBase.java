@@ -160,48 +160,4 @@ public abstract class VariantWalkerBase extends GATKTool {
      */
     public abstract void apply( VariantContext variant, ReadsContext readsContext, ReferenceContext referenceContext, FeatureContext featureContext );
 
-    //TODO maybe I should be using this as the source of the annotator engine but its unclear t
-    /**
-     * Merge the default filters with the users's command line read filter requests, then initialize
-     * the resulting filters.
-     *
-     * @param vcfHeader - a VCFFileHeader to use to initialize read filter instances
-     * @return Single merged read filter.
-     */
-    public final VariantAnnotatorEngine getVariantAnnotatorEngine(final VCFHeader vcfHeader, final boolean useRaw) {
-//        Utils.nonNull(vcfHeader);
-//        return getVariantAnnotatorEngine(
-//                vcfHeader,
-//                (annotations, header) -> {
-//                    return new VariantAnnotatorEngine(annotations, );
-//                }
-//        );
-        return null;
-    }
-
-    /**
-     * List of required annotations by the tool
-     */
-    public List<Annotation> getDefaultAnnotatations() {
-        return Collections.emptyList();
-    }
-
-    /**
-     * List of required annotation groups by the tool
-     */
-    public List<String> getDefaultAnnotationGroups() {
-        return Collections.emptyList();
-    }
-
-    /**
-     * Return the list of GATKCommandLinePluginDescriptors to be used for this tool.
-     * Uses the read filter plugin.
-     */
-    @Override
-    public List<? extends CommandLinePluginDescriptor<?>> getPluginDescriptors() {
-        List<CommandLinePluginDescriptor<?>> descriptors = new ArrayList<>(super.getPluginDescriptors());
-        descriptors.add(new GATKAnnotationPluginDescriptor(getDefaultAnnotatations(), getDefaultAnnotationGroups()));
-        return descriptors;
-    }
-
 }
