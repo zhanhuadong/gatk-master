@@ -28,7 +28,7 @@ import org.broadinstitute.hellbender.engine.spark.SparkSharder;
 import org.broadinstitute.hellbender.engine.spark.datasources.VariantsSparkSink;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
-import org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine;
+import org.broadinstitute.hellbender.tools.walkers.annotator.*;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCaller;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerArgumentCollection;
 import org.broadinstitute.hellbender.tools.walkers.haplotypecaller.HaplotypeCallerEngine;
@@ -118,11 +118,31 @@ public final class HaplotypeCallerSpark extends GATKSparkTool {
         return true;
     }
 
+    @Override
+    public boolean useAnnotationArguments() { return true;}
+
+    /**
+     * @see HaplotypeCaller#getAnnotationsToUse()
+     * @return
+     */
+    @Override
+    public Collection<Annotation> getAnnotationsToUse() {
+        final boolean confidenceMode = hcArgs.emitReferenceConfidence != ReferenceConfidenceMode.NONE;
+        final Collection<Annotation> annotations = super.getAnnotationsToUse();
+        return Stream.concat(annotations.stream(),
+                (!annotations.contains(new StrandBiasBySample())&&confidenceMode?Arrays.asList(new StrandBiasBySample()):new ArrayList<Annotation>() ).stream())
+                .filter(c -> !((confidenceMode)
+                        && (c.getClass()==(ChromosomeCounts.class) ||
+                        c.getClass()==(FisherStrand.class) ||
+                        c.getClass()==(StrandOddsRatio.class) ||
+                        c.getClass()==(QualByDepth.class)))
+                ).collect(Collectors.toList());
+    }
 
     @Override
     protected void runTool(final JavaSparkContext ctx) {
         final List<SimpleInterval> intervals = hasIntervals() ? getIntervals() : IntervalUtils.getAllIntervalsForReference(getHeaderForReads().getSequenceDictionary());
-        callVariantsWithHaplotypeCallerAndWriteOutput(getAuthHolder(), ctx, getReads(), getHeaderForReads(), getReference(), intervals, hcArgs, shardingArgs, numReducers, output);
+        callVariantsWithHaplotypeCallerAndWriteOutput(getAuthHolder(), ctx, getReads(), getHeaderForReads(), getReference(), intervals, hcArgs, shardingArgs, numReducers, output, getAnnotationsToUse());
     }
 
     @Override
@@ -156,13 +176,15 @@ public final class HaplotypeCallerSpark extends GATKSparkTool {
             final HaplotypeCallerArgumentCollection hcArgs,
             final ShardingArgumentCollection shardingArgs,
             final int numReducers,
-            final String output) {
+            final String output,
+            final Collection<Annotation> annotations) {
         // Reads must be coordinate sorted to use the overlaps partitioner
         final SAMFileHeader readsHeader = header.clone();
         readsHeader.setSortOrder(SAMFileHeader.SortOrder.coordinate);
         final JavaRDD<GATKRead> coordinateSortedReads = SparkUtils.coordinateSortReads(reads, readsHeader, numReducers);
+        VariantAnnotatorEngine variantannotatorEngine = new VariantAnnotatorEngine(annotations,  hcArgs.dbsnp.dbsnp, hcArgs.comps, hcArgs.emitReferenceConfidence == ReferenceConfidenceMode.NONE);
 
-        final HaplotypeCallerEngine hcEngine = new HaplotypeCallerEngine(hcArgs, false, false, readsHeader, new ReferenceMultiSourceAdapter(reference, authHolder));
+        final HaplotypeCallerEngine hcEngine = new HaplotypeCallerEngine(hcArgs, false, false, readsHeader, new ReferenceMultiSourceAdapter(reference, authHolder), variantannotatorEngine);
         final JavaRDD<VariantContext> variants = callVariantsWithHaplotypeCaller(authHolder, ctx, coordinateSortedReads, readsHeader, reference, intervals, hcArgs, shardingArgs);
         variants.cache(); // without caching, computations are run twice as a side effect of finding partition boundaries for sorting
         try {

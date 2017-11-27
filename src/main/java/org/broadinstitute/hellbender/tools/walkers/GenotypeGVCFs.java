@@ -129,6 +129,9 @@ public final class GenotypeGVCFs extends VariantWalker {
     }
 
     @Override
+    public boolean useAnnotationArguments() { return true;}
+
+    @Override
     public List<String> getDefaultAnnotationGroups() {
         return Arrays.asList(StandardAnnotation.class.getSimpleName());
     }

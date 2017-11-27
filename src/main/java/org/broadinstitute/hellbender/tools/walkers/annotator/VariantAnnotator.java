@@ -171,6 +171,9 @@ public class VariantAnnotator extends VariantWalker {
     @Argument(fullName="MendelViolationGenotypeQualityThreshold",shortName="mvq",optional=true,doc="GQ threshold for annotating MV ratio")
     public double minGenotypeQualityP = 0.0;
 
+    @Override
+    public boolean useAnnotationArguments() { return true;}
+
     private VariantAnnotatorEngine annotatorEngine;
     private SampleList variantSamples;
 

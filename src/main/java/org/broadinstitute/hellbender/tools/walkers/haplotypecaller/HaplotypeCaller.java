@@ -20,9 +20,9 @@ import org.broadinstitute.hellbender.utils.SimpleInterval;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -197,6 +197,31 @@ public final class HaplotypeCaller extends AssemblyRegionWalker {
 
     @Override
     public List<String> getDefaultAnnotationGroups() { return Arrays.asList(StandardAnnotation.class.getSimpleName(), StandardHCAnnotation.class.getSimpleName());}
+
+    @Override
+    public boolean useAnnotationArguments() { return true;}
+
+    /**
+     * If we are in GVCF mode we want to tailor the annotations as there are certain annotations in the standard
+     * haplotype caller set which are no longer relevant, thus we filter them out before constructing the
+     * VariantAnnotationEngine because the user args will have been parsed by that point.
+     *
+     * @see GATKTool#getAnnotationsToUse()
+     * @return a collection of annotation arguments with alterations depending on hcArgs.emitReferenceConfidence
+     */
+    @Override
+    public Collection<Annotation> getAnnotationsToUse() {
+        final boolean confidenceMode = hcArgs.emitReferenceConfidence != ReferenceConfidenceMode.NONE;
+        final Collection<Annotation> annotations = super.getAnnotationsToUse();
+        return Stream.concat(annotations.stream(),
+                (!annotations.contains(new StrandBiasBySample()) && confidenceMode ? Arrays.asList(new StrandBiasBySample()) : new ArrayList<Annotation>()).stream())
+                .filter(c -> !((confidenceMode)
+                        && (c.getClass() == (ChromosomeCounts.class) ||
+                            c.getClass() == (FisherStrand.class) ||
+                            c.getClass() == (StrandOddsRatio.class) ||
+                            c.getClass() == (QualByDepth.class)))
+                ).collect(Collectors.toList());
+    }
 
     @Override
     public AssemblyRegionEvaluator assemblyRegionEvaluator() {

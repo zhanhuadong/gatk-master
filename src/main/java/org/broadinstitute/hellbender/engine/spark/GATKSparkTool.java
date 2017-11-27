@@ -12,6 +12,7 @@ import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKAnnotationPluginDesc
 import org.broadinstitute.hellbender.cmdline.GATKPlugin.GATKReadFilterPluginDescriptor;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.argumentcollections.*;
+import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.engine.TraversalParameters;
 import org.broadinstitute.hellbender.engine.datasources.ReferenceMultiSource;
 import org.broadinstitute.hellbender.engine.datasources.ReferenceWindowFunctions;
@@ -106,8 +107,9 @@ public abstract class GATKSparkTool extends SparkCommandLineProgram {
      */
     @Override
     public List<? extends CommandLinePluginDescriptor<?>> getPluginDescriptors() {
-        return Arrays.asList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()),
-                             new GATKAnnotationPluginDescriptor(getDefaultAnnotations(), getDefaultAnnotationGroups()));
+        return useAnnotationArguments()?
+                Arrays.asList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()), new GATKAnnotationPluginDescriptor(getDefaultAnnotations(), getDefaultAnnotationGroups())):
+                Collections.singletonList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()));
     }
 
     /**
@@ -339,25 +341,28 @@ public abstract class GATKSparkTool extends SparkCommandLineProgram {
     }
 
     /**
-     * TODO this needs to be commented
-     *
-     * @return List of individual filters to be applied for this tool.
+     * @see GATKTool#useAnnotationArguments()
+     */
+    public boolean useAnnotationArguments() {
+        return false;
+    }
+
+    /**
+     * @see GATKTool#getDefaultAnnotations()
      */
     public List<Annotation> getDefaultAnnotations() {
         return Collections.emptyList();
     }
 
     /**
-     * TODO this needs to be commented
-     *
-     * @return List of individual filters to be applied for this tool.
+     * @see GATKTool#getDefaultAnnotationGroups()
      */
     public List<String> getDefaultAnnotationGroups() {
         return Collections.emptyList();
     }
 
     /**
-     * TODO this needs to be commented
+     * @see GATKTool#getAnnotationsToUse()
      */
     public Collection<Annotation> getAnnotationsToUse() {
         final GATKAnnotationPluginDescriptor readFilterPlugin =

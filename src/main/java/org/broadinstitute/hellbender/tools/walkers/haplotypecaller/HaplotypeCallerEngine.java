@@ -145,16 +145,13 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
      * @param createBamOutMD5 true to create an md5 file for the bamout
      * @param readsHeader header for the reads
      * @param referenceReader reader to provide reference data
+     * @param annotationEngine variantAnnotatorEngine with annotations to process already added
      */
-    public HaplotypeCallerEngine( final HaplotypeCallerArgumentCollection hcArgs,  boolean createBamOutIndex, boolean createBamOutMD5, final SAMFileHeader readsHeader, ReferenceSequenceFile referenceReader ) {
-        this(hcArgs, createBamOutIndex, createBamOutMD5, readsHeader, referenceReader, null);
-    }
-
     public HaplotypeCallerEngine( final HaplotypeCallerArgumentCollection hcArgs, boolean createBamOutIndex, boolean createBamOutMD5, final SAMFileHeader readsHeader, ReferenceSequenceFile referenceReader, VariantAnnotatorEngine annotationEngine ) {
         this.hcArgs = Utils.nonNull(hcArgs);
         this.readsHeader = Utils.nonNull(readsHeader);
         this.referenceReader = Utils.nonNull(referenceReader);
-        this.annotationEngine = annotationEngine;
+        this.annotationEngine = Utils.nonNull(annotationEngine);
         this.aligner = SmithWatermanAligner.getAligner(hcArgs.smithWatermanImplementation);
         initialize(createBamOutIndex, createBamOutMD5);
     }
@@ -227,12 +224,12 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
             //TODO this should probably be changed for a more elegant solution but this changes the least amount compared to current (Note this wouldn't apply for spark anyway)
             //TODO for posterity the problem is that there is no way to negatively specify classes when we provide tool defaults to the AnnotaiotnPlugin
-            annotationEngine.removeAnnotation(ChromosomeCounts.class);
-            annotationEngine.removeAnnotation(FisherStrand.class);
-            annotationEngine.removeAnnotation(StrandOddsRatio.class);
-            annotationEngine.removeAnnotation(QualByDepth.class);
-
-            annotationEngine.addAnnotation(new StrandBiasBySample());
+//            annotationEngine.removeAnnotation(ChromosomeCounts.class);
+//            annotationEngine.removeAnnotation(FisherStrand.class);
+//            annotationEngine.removeAnnotation(StrandOddsRatio.class);
+//            annotationEngine.removeAnnotation(QualByDepth.class);
+//
+//            annotationEngine.addAnnotation(new StrandBiasBySample());
 
             logger.info("Standard Emitting and Calling confidence set to 0.0 for reference-model confidence output");
             if ( ! hcArgs.annotateAllSitesWithPLs ) {

@@ -35,6 +35,7 @@ import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilter;
 import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.walkers.annotator.Annotation;
 import org.broadinstitute.hellbender.transformers.ReadTransformer;
@@ -171,7 +172,9 @@ public abstract class GATKTool extends CommandLineProgram {
      */
     @Override
     public List<? extends CommandLinePluginDescriptor<?>> getPluginDescriptors() {
-        return Arrays.asList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()), new GATKAnnotationPluginDescriptor(getDefaultAnnotations(), getDefaultAnnotationGroups()));
+        return useAnnotationArguments()?
+                Arrays.asList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()), new GATKAnnotationPluginDescriptor(getDefaultAnnotations(), getDefaultAnnotationGroups())):
+                Collections.singletonList(new GATKReadFilterPluginDescriptor(getDefaultReadFilters()));
     }
 
     /**
@@ -215,41 +218,58 @@ public abstract class GATKTool extends CommandLineProgram {
     }
 
     /**
-     * TODO this needs to be commented
+     * Must be overridden in order to add annotation arguments to the engine. If this is set to true the engine will
+     * dynamically discover all {@link Annotation}s in the package {@link org.broadinstitute.hellbender.tools.walkers.annotator} and automatically
+     * generate and add command line arguments allowing the user to specify which annotations or groups of annotations to use.
      *
-     * @return List of individual filters to be applied for this tool.
+     * To specify default annotations for a tool simply specify them using {@link #getDefaultAnnotationGroups()} or {@link #getDefaultAnnotations()}
+     *
+     * To access instantiated annotation objects simply use {@link #getAnnotationsToUse()}.
+     */
+    public boolean useAnnotationArguments() {
+        return false;
+    }
+
+    /**
+     * Returns the default list of Annotations that are used for this tool. The annotations returned
+     * by this method are subject to selective enabling/disabling by the user via the command line. The
+     * default implementation returns an empty list. Subclasses can override to provide alternative annotations.
+     *
+     * @return List of individual annotations to be applied for this tool.
      */
     public List<Annotation> getDefaultAnnotations() {
         return Collections.emptyList();
     }
 
     /**
-     * TODO this needs to be commented
+     * Returns the default list of annotation groups that are used for this tool. The annotations returned
+     * by this method will have default arguments, which can be overridden with specifc arguments using
+     * {@link #getDefaultAnnotations()}. Returned annotation groups are subject to selective enabling/disabling
+     * by the user via the command line. Thedefault implementation returns an empty list.
      *
-     * @return List of individual filters to be applied for this tool.
+     * @return List of annotation groups to be applied for this tool.
      */
     public List<String> getDefaultAnnotationGroups() {
         return Collections.emptyList();
     }
 
     /**
-     * Returns a read filter (simple or composite) that can be applied to reads. This implementation combines
-     * the default read filters for this tool (returned by {@link #getDefaultReadFilters} along with any read filter
-     * command line directives specified by the user (such as enabling other filters or disabling default filters);
-     * wraps each filter in the resulting list with a CountingReadFilter; and returns a single composite filter
-     * resulting from the list by and'ing them together.
+     * Returns a list of annotations that can be applied to VariantContexts. This implementation combines
+     * the default annotations for this tool (returned by {@link #getDefaultAnnotations()} and {@link #getDefaultAnnotationGroups()}
+     * along with any annotations command line directives specified by the user (such as enabling other annotations/groups
+     * or disabling default annotations) and returns an a collection of all the annotation arguments instantiated.
      *
      * NOTE: Most tools will not need to override the method, and should only do so in order to provide custom
-     * behavior or processing of the final merged read filter. To change the default read filters used by the tool,
-     * override {@link #getDefaultReadFilters} instead.
+     * behavior or processing of the final annotations based on other command line input. To change the default
+     * annotations used by the tool, override {@link #getDefaultAnnotations()} instead.
      *
-     * Implementations of {@link #traverse()} should call this method once before iterating over the reads, in order to
-     * unnecessary avoid object allocation. Nevertheless, keeping state in filter objects is strongly discouraged.
-     *
-     * Multiple filters can be composed by using {@link org.broadinstitute.hellbender.engine.filters.ReadFilter}
-     * composition methods.
+     * To apply returned annotations to a VariantContext, simply use a {@link org.broadinstitute.hellbender.tools.walkers.annotator.VariantAnnotatorEngine}
+     * constructed with the discovered annotations.
      */
     public Collection<Annotation> getAnnotationsToUse(){
+        if (!useAnnotationArguments()) {
+            throw new GATKException("Tool requested tailored annotations but has not overridden 'useAnnotationArguments()' to return true");
+        }
         final GATKAnnotationPluginDescriptor readFilterPlugin =
                 getCommandLineParser().getPluginDescriptor(GATKAnnotationPluginDescriptor.class);
         return readFilterPlugin.getMergedAnnotations();
