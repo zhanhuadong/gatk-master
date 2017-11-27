@@ -224,6 +224,9 @@ public final class Mutect2 extends AssemblyRegionWalker {
     protected boolean includeReadsWithDeletionsInIsActivePileups() { return true; }
 
     @Override
+    public boolean useAnnotationArguments() { return true;}
+
+    @Override
     public List<ReadFilter> getDefaultReadFilters() {
         return Mutect2Engine.makeStandardMutect2ReadFilters();
     }
