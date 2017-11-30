@@ -441,9 +441,7 @@ public final class VariantAnnotatorEngineUnitTest extends GATKBaseTest {
 
     @Test(expectedExceptions = GATKException.class)
     public void testDBSNPONlyViaSpecialArg() throws Exception {
-        final List<String> annotationGroupsToUse = Collections.emptyList();
-        final List<String> annotationsToUse = Arrays.asList(Coverage.class.getSimpleName());//good one
-        final List<String> annotationsToExclude = Collections.emptyList();
+        final List<Annotation> annotationsToUse = Arrays.asList(new Coverage());//good one
         final File dbSNPFile = new File(publicTestDir + "Homo_sapiens_assembly19.dbsnp135.chr1_1M.exome_intervals.vcf");
         final FeatureInput<VariantContext> dbSNPBinding = new FeatureInput<>(dbSNPFile.getAbsolutePath(), VCFConstants.DBSNP_KEY, Collections.emptyMap());
 
@@ -451,7 +449,7 @@ public final class VariantAnnotatorEngineUnitTest extends GATKBaseTest {
         final FeatureInput<VariantContext> fredInput = new FeatureInput<>(fredFile.getAbsolutePath(), VCFConstants.DBSNP_KEY, Collections.emptyMap());
         final List<FeatureInput<VariantContext>> features = Arrays.asList(fredInput);
 
-        VariantAnnotatorEngine.ofSelectedMinusExcluded(annotationGroupsToUse, annotationsToUse, annotationsToExclude, dbSNPBinding, features);
+        new VariantAnnotatorEngine(annotationsToUse, dbSNPBinding, features, false);
     }
 
     @Test
