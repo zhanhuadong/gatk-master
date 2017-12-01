@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Created by Takuto Sato on 7/26/17.
@@ -73,7 +74,7 @@ public class CollectDataForReadOrientationFilter extends LocusWalker {
     private static final int MIDDLE_INDEX = REFERENCE_CONTEXT_PADDING_ON_EACH_SIDE;
 
     // we put reference site depths above this value in the last bin of the histogram
-    private static final int MAX_REF_DEPTH = 200;
+    public static final int MAX_REF_DEPTH = 200;
 
     // the list of all possible kmers, where k = REFERENCE_CONTEXT_SIZE
     private static final List<String> ALL_KMERS = SequenceUtil.generateAllKmers(REFERENCE_CONTEXT_SIZE).stream()
@@ -100,7 +101,12 @@ public class CollectDataForReadOrientationFilter extends LocusWalker {
 
     @Override
     public void onTraversalStart() {
-        ALL_KMERS.forEach(context -> refSiteHistograms.put(context, new Histogram<>("depth", context)));
+        final Integer[] allBins = IntStream.rangeClosed(1, MAX_REF_DEPTH).boxed().toArray( Integer[]::new );
+        ALL_KMERS.forEach(context -> {
+            Histogram<Integer> emptyHistogram = new Histogram<>("depth", context);
+            emptyHistogram.prefillBins(allBins);
+            refSiteHistograms.put(context, emptyHistogram);
+        });
 
         // intentionally not use try-with-resources so that the writer stays open outside of the try block
         try {
@@ -202,6 +208,6 @@ public class CollectDataForReadOrientationFilter extends LocusWalker {
         // have deleted bases at this particular locus
         isIndel = isIndel || depth == 0 && pileup.size() > 0;
 
-        return pileup.size() > 0 || ! isIndel || MathUtils.median(mappingQualities) >= MINIMUM_MEDIAN_MQ || depth > 0;
+        return depth > 0 && ! isIndel && MathUtils.median(mappingQualities) >= MINIMUM_MEDIAN_MQ;
     }
 }

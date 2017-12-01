@@ -21,6 +21,8 @@ import org.testng.internal.junit.ArrayAsserts;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 /**
@@ -31,7 +33,7 @@ public class CollectDataForReadOrientationFilterIntegrationTest extends CommandL
      * Test the tool on a real bam to make sure that it does not crash
      */
     @Test
-    public void testOnRealBam() {
+    public void testOnRealBam() throws IOException {
         final File refMetrics = createTempFile("ref", ".table");
         final File altTable = createTempFile("alt", ".table");
 
@@ -43,6 +45,11 @@ public class CollectDataForReadOrientationFilterIntegrationTest extends CommandL
         };
 
         runCommandLine(args);
+        int lineCount = (int) Files.lines(Paths.get(refMetrics.getAbsolutePath())).filter(l -> l.matches("^[0-9].+")).count();
+
+        // Ensure that we print every bin, even when the count is 0
+        Assert.assertEquals(lineCount, CollectDataForReadOrientationFilter.MAX_REF_DEPTH);
+
     }
 
     @Test
