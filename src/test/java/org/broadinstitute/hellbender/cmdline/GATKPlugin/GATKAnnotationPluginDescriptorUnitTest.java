@@ -362,19 +362,17 @@ public class GATKAnnotationPluginDescriptorUnitTest {
 
     @Test
     public void testAll(){
-        // TODO this should maybe be figured out..
-        final List<String> annotationsToExclude= Collections.emptyList();
+        CommandLineParser clp = new CommandLineArgumentParser(
+                new Object(),
+                Collections.singletonList(new GATKAnnotationPluginDescriptor(null, null)),
+                Collections.emptySet());
+        String[] args = {"--useAllAnnotations"};
+        clp.parseArguments(nullMessageStream, args);
+        List<Annotation> annots = instantiateFilter(clp);
+
         final FeatureInput<VariantContext> dbSNPBinding = null;
         final List<FeatureInput<VariantContext>> features = Collections.emptyList();
-        final VariantAnnotatorEngine vae = VariantAnnotatorEngine.ofAllMinusExcluded(annotationsToExclude, dbSNPBinding, features, false);
-//        Assert.assertFalse(vae.getVCFAnnotationDescriptions(false).contains(null));
-//        Assert.assertFalse(vae.getGenotypeAnnotations().isEmpty());
-//        Assert.assertFalse(vae.getInfoAnnotations().isEmpty());
-//
-//        final List<GenotypeAnnotation> knowGenoAnnos = ClassUtils.makeInstancesOfSubclasses(GenotypeAnnotation.class, Annotation.class.getPackage());
-//        final List<InfoFieldAnnotation> knowInfoAnnos = ClassUtils.makeInstancesOfSubclasses(InfoFieldAnnotation.class, Annotation.class.getPackage());
-//        Assert.assertEquals(vae.getGenotypeAnnotations().size(), knowGenoAnnos.size());
-//        Assert.assertEquals(vae.getInfoAnnotations().size(), knowInfoAnnos.size());
+        final VariantAnnotatorEngine vae = new VariantAnnotatorEngine(annots, dbSNPBinding, features, false);
 
         final Set<VCFHeaderLine> vcfAnnotationDescriptions = vae.getVCFAnnotationDescriptions(false);
         Assert.assertFalse(vcfAnnotationDescriptions.isEmpty());
@@ -386,20 +384,24 @@ public class GATKAnnotationPluginDescriptorUnitTest {
 
     @Test
     public void testAllMinusCoverage(){
-        final List<String> annotationsToExclude= Arrays.asList(Coverage.class.getSimpleName());
+        CommandLineParser clp = new CommandLineArgumentParser(
+                new Object(),
+                Collections.singletonList(new GATKAnnotationPluginDescriptor(null, null)),
+                Collections.emptySet());
+        String[] args = {"--useAllAnnotations", "-AX", "Coverage"};
+        clp.parseArguments(nullMessageStream, args);
+        List<Annotation> annots = instantiateFilter(clp);
+
         final FeatureInput<VariantContext> dbSNPBinding = null;
-//        final List<FeatureInput<VariantContext>> features = Collections.emptyList();
-//        final VariantAnnotatorEngine vae = VariantAnnotatorEngine.ofAllMinusExcluded(annotationsToExclude, dbSNPBinding, features, false);
-//        Assert.assertFalse(vae.getVCFAnnotationDescriptions(false).contains(null));
-//        Assert.assertFalse(vae.getGenotypeAnnotations().isEmpty());
-//        Assert.assertFalse(vae.getInfoAnnotations().isEmpty());
-//
-//        final Set<VCFHeaderLine> vcfAnnotationDescriptions = vae.getVCFAnnotationDescriptions(false);
-//        Assert.assertFalse(vcfAnnotationDescriptions.isEmpty());
-//
-//        Assert.assertFalse(vcfAnnotationDescriptions.contains(VCFStandardHeaderLines.getInfoLine(VCFConstants.DBSNP_KEY)));
-//        Assert.assertFalse(vcfAnnotationDescriptions.contains(VCFStandardHeaderLines.getInfoLine(VCFConstants.DEPTH_KEY))); //no DP
-//        Assert.assertTrue(vcfAnnotationDescriptions.contains(VCFStandardHeaderLines.getInfoLine(VCFConstants.ALLELE_COUNT_KEY)));  //yes AC
+        final List<FeatureInput<VariantContext>> features = Collections.emptyList();
+        final VariantAnnotatorEngine vae = new VariantAnnotatorEngine(annots, dbSNPBinding, features, false);
+
+        final Set<VCFHeaderLine> vcfAnnotationDescriptions = vae.getVCFAnnotationDescriptions(false);
+        Assert.assertFalse(vcfAnnotationDescriptions.isEmpty());
+
+        Assert.assertFalse(vcfAnnotationDescriptions.contains(VCFStandardHeaderLines.getInfoLine(VCFConstants.DBSNP_KEY)));
+        Assert.assertFalse(vcfAnnotationDescriptions.contains(VCFStandardHeaderLines.getInfoLine(VCFConstants.DEPTH_KEY))); //no DP
+        Assert.assertTrue(vcfAnnotationDescriptions.contains(VCFStandardHeaderLines.getInfoLine(VCFConstants.ALLELE_COUNT_KEY)));  //yes AC
     }
 
 
