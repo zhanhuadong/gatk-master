@@ -75,15 +75,14 @@ def load_genome_strip_vcf_file(genome_strip_vcf_file: str,
                                                       quality, ref_copy_number=None, variant_frequency=None)
                 gs_call_set_list[si].add(sample_var)
 
-    # step 2. determine the ref copy number based on majority var calls
-    #
-    # Idea:
-    #     Since the GS VCF contains variants for all samples, the majority of these variants are REF
-    #     for any given sample.
+    # step 2. set the ref copy number
     #
     # Note:
-    #     For autosomal variants, we assume REF_CN = REF_AUTOSOMAL_PLOIDY
-
+    #   Since GS VCF contains variants discovered on any sample for all samples, the majority of
+    #   variant contexts are REF for any given sample. We use this observation to determine the
+    #   ploidy of sex chromosomes by identifying the most commonly called copy number state in
+    #   sex chromosomes for each sample. For autosomal variants, we set `ref_copy_number` to
+    #   `autosomal_ref_copy_number` (default=2).
     _logger.info("Determining reference copy numbers...")
     for gs_call_set in gs_call_set_list:
         _logger.info("Sample name: {0}".format(gs_call_set.sample_name))
@@ -91,7 +90,7 @@ def load_genome_strip_vcf_file(genome_strip_vcf_file: str,
             if contig in allosomal_contigs:
                 inferred_ref_for_contig = _get_mode_int_list(
                     [iv.data.var_copy_number for iv in gs_call_set.get_contig_interval_tree(contig)])
-                print("contig: {0}, inferred REF_CN: {1}".format(contig, inferred_ref_for_contig))
+                _logger.info("contig: {0}, inferred REF_CN: {1}".format(contig, inferred_ref_for_contig))
             else:
                 inferred_ref_for_contig = autosomal_ref_copy_number
             for iv in gs_call_set.get_contig_interval_tree(contig):
@@ -122,6 +121,7 @@ def load_genome_strip_vcf_file(genome_strip_vcf_file: str,
             for variant in gs_call_set.iter_in_contig(contig):
                 if variant.is_var:
                     var_only_gs_call_set.add(variant)
+        var_only_gs_call_set.tags.add("Removed non-variant calls")
         var_only_gs_call_set_list.append(var_only_gs_call_set)
 
     return var_only_gs_call_set_list

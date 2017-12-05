@@ -1,7 +1,9 @@
 import numpy as np
+import pickle
 from gcnvkernel import Interval
-from typing import Optional, Set, Generator
+from typing import Optional, Set, Generator, List
 from intervaltree_bio import GenomeIntervalTree, IntervalTree
+from collections import namedtuple
 
 
 class GenericCopyNumberVariant(Interval):
@@ -58,12 +60,12 @@ class GenericCopyNumberVariant(Interval):
         assert self.variant_frequency is not None, "Variant {0} has no variant frequency annotation".format(self)
         return self.variant_frequency <= max_variant_frequency
 
+    def variant_frequency_above_min_value(self, min_variant_frequency: float):
+        assert self.variant_frequency is not None, "Variant {0} has no variant frequency annotation".format(self)
+        return self.variant_frequency >= min_variant_frequency
+
     def quality_above_min_value(self, min_quality: float):
         return self.quality >= min_quality
-
-    def num_intervals_above_min_value(self, min_num_intervals: int):
-        assert self.variant_frequency is not None, "Variant {0} has no number of intervals annotation".format(self)
-        return self.num_intervals >= min_num_intervals
 
     def get_padded(self, padding: int, keep_annotations=False):
         return GenericCopyNumberVariant(self.contig, self.start - padding, self.end + padding,
@@ -80,7 +82,7 @@ class GenericCopyNumberVariant(Interval):
             return float(shared) / span
 
     def __repr__(self):
-        return "({0}, {1}, {2}), VAR_CN: {3}, REF_CN: {4}, QUAL: {5:.3f}, VF: {6}, NI: {7}".format(
+        return "({0}, {1}, {2}), VAR_CN: {3}, REF_CN: {4}, GQ: {5:.3f}, VF: {6}, NI: {7}".format(
             self.contig, self.start, self.end,
             self.var_copy_number,
             "N/A" if self.ref_copy_number is None else self.ref_copy_number,
@@ -91,19 +93,57 @@ class GenericCopyNumberVariant(Interval):
     __str__ = __repr__
 
 
+GenericCNVCallSetPickleBundle = namedtuple(
+    'GenericCNVCallSetPickleBundle', 'sample_name, tags, genome_interval_tree')
+
+
 class GenericCNVCallSet:
-    def __init__(self, sample_name: str):
+
+    def __init__(self, sample_name: str, tags: Set[str] = set()):
         self.sample_name = sample_name
-        self.genomic_interval_tree = GenomeIntervalTree()
+        self.tags = tags
+        self.genome_interval_tree = GenomeIntervalTree()
+
+    @staticmethod
+    def from_genome_interval_tree(sample_name: str,
+                                  genome_interval_tree: GenomeIntervalTree,
+                                  tags: Set[str] = set()):
+        call_set = GenericCNVCallSet(sample_name, tags=tags)
+        call_set.genome_interval_tree = genome_interval_tree
+        return call_set
+
+    @staticmethod
+    def from_pickle(pickle_file: str) -> List['GenericCNVCallSet']:
+        with open(pickle_file, 'rb') as f:
+            unpickler = pickle.Unpickler(f)
+            call_set_list = list()
+            while True:
+                try:
+                    pickle_bundle = unpickler.load()
+                    call_set_list.append(GenericCNVCallSet.from_genome_interval_tree(
+                        pickle_bundle.sample_name, pickle_bundle.genome_interval_tree, pickle_bundle.tags))
+                except EOFError:
+                    break
+            return call_set_list
+
+    @staticmethod
+    def to_pickle(pickle_file: str, call_set_list: List['GenericCNVCallSet']):
+        with open(pickle_file, 'wb') as f:
+            for call_set in call_set_list:
+                pickle_bundle = GenericCNVCallSetPickleBundle(
+                    call_set.sample_name,
+                    call_set.tags,
+                    call_set.genome_interval_tree)
+                pickle.dump(pickle_bundle, f)
 
     def add(self, variant: GenericCopyNumberVariant):
-        self.genomic_interval_tree.addi(variant.contig, variant.start, variant.end, data=variant)
+        self.genome_interval_tree.addi(variant.contig, variant.start, variant.end, data=variant)
 
     def get_overlapping_variants_set(self,
                                      interval: Interval,
                                      min_symmetric_overlap_fraction: Optional[float] = None) \
             -> Set[GenericCopyNumberVariant]:
-        tree_query = self.genomic_interval_tree[interval.contig].search(interval.start, interval.end)
+        tree_query = self.genome_interval_tree[interval.contig].search(interval.start, interval.end)
         found_variants = {found_interval.data for found_interval in tree_query}
         if min_symmetric_overlap_fraction is None:
             return found_variants
@@ -112,45 +152,84 @@ class GenericCNVCallSet:
                     if variant.get_symmetric_overlap_fraction(interval) >= min_symmetric_overlap_fraction}
 
     def overlaps_with(self, interval: Interval) -> bool:
-        return self.genomic_interval_tree[interval.contig].overlaps(interval.start, interval.end)
+        return self.genome_interval_tree[interval.contig].overlaps(interval.start, interval.end)
 
     def iter_in_contig(self, contig: str) -> Generator:
-        for entry in self.genomic_interval_tree[contig].iter():
+        for entry in self.genome_interval_tree[contig].iter():
             yield entry.data
 
     def get_contig_interval_tree(self, contig: str) -> IntervalTree:
-        return self.genomic_interval_tree[contig]
+        return self.genome_interval_tree[contig]
 
     @property
     def contigs_set(self) -> Set[str]:
-        return set(self.genomic_interval_tree.keys())
+        return set(self.genome_interval_tree.keys())
 
-    def merge_nearby_variants(self, padding: int):
-        """Returns a new call set in which nearby variants are merged together."""
+    def merge_overlapping_variants(self, padding: int,
+                                   interval_consensus_strategy: str = 'highest_quality',
+                                   call_consensus_strategy: str = 'highest_quality') -> 'GenericCNVCallSet':
+        """Returns a new call set in which nearby variants are merged together.
 
-        def get_unpadded_merged_variant(_overlapping_variants_set: Set[GenericCopyNumberVariant]) \
+        Args:
+            padding: (positive integer) the amount by which the intervals are to be padded
+                symmetrically before detecting overlapping sets
+            interval_consensus_strategy: strategy for obtaining the consensus interval.
+                the choices are are follows:
+                `highest_quality`: select the highest quality variant in the set
+                `envelope`: yields the smallest interval that envelopes all variants in the
+                overlapping set
+            call_consensus_strategy: strategy for obtaining the consensus call (i.e.
+                var copy number, quality, etc.). the choices are as follows:
+                'highest_quality`: calls from the highest quality variant will be copied
+                `average`: use average of the calls in the overlapping set
+        """
+
+        assert interval_consensus_strategy in {'highest_quality', 'envelope'}, \
+            "Unrecognized interval consensus strategy"
+        assert call_consensus_strategy in {'highest_quality', 'average'}, \
+            "Unrecognized call consensus strategy"
+
+        def generate_consensus_variant(_overlapping_variants_set: Set[GenericCopyNumberVariant]) \
                 -> GenericCopyNumberVariant:
             """From a set of overlapping variants, chooses the variant with highest quality as
             a representative, and returns a new variant that envelopes the overlapping set with
-            the same attributes as the highest quality variant."""
+            the same attributes as the highest quality variant.
+
+            Args:
+                _overlapping_variants_set: a set of overlapping `GenericCopyNumberVariant`, each
+                    padded symmetrically by `padding`
+            """
             assert len(_overlapping_variants_set) > 0
 
-            contig = next(iter(_overlapping_variants_set)).contig
-            start = min([variant.start for variant in _overlapping_variants_set]) + padding
-            end = max([variant.end for variant in _overlapping_variants_set]) - padding
+            _contig = next(iter(_overlapping_variants_set)).contig
+            num_intervals = sum([_variant.num_intervals for _variant in _overlapping_variants_set])
 
-            highest_quality_variant = sorted(_overlapping_variants_set, key=lambda variant: variant.quality)[-1]
-            ref_copy_number = highest_quality_variant.ref_copy_number
-            var_copy_number = highest_quality_variant.var_copy_number
-            quality = highest_quality_variant.quality
-            variant_frequency = highest_quality_variant.variant_frequency
-            num_intervals = sum([variant.num_intervals for variant in _overlapping_variants_set])
+            highest_quality_variant = sorted(_overlapping_variants_set, key=lambda _variant: _variant.quality)[-1]
 
-            return GenericCopyNumberVariant(contig, start, end,
-                                            var_copy_number, quality,
-                                            ref_copy_number=ref_copy_number,
-                                            variant_frequency=variant_frequency,
-                                            num_intervals=num_intervals)
+            if interval_consensus_strategy == 'highest_quality':
+                start = highest_quality_variant.start + padding
+                end = highest_quality_variant.end - padding
+            elif interval_consensus_strategy == 'envelope':
+                start = min([_variant.start for _variant in _overlapping_variants_set]) + padding
+                end = max([_variant.end for _variant in _overlapping_variants_set]) - padding
+            else:
+                raise Exception("Should not reach here")
+
+            if call_consensus_strategy == 'highest_quality':
+                ref_copy_number = highest_quality_variant.ref_copy_number
+                var_copy_number = highest_quality_variant.var_copy_number
+                quality = highest_quality_variant.quality
+                variant_frequency = highest_quality_variant.variant_frequency
+            elif call_consensus_strategy == 'average':  # todo
+                raise NotImplementedError
+            else:
+                raise Exception("Should not reach here")
+
+            return GenericCopyNumberVariant(
+                _contig, start, end, var_copy_number, quality,
+                ref_copy_number=ref_copy_number,
+                variant_frequency=variant_frequency,
+                num_intervals=num_intervals)
 
         # create an empty genome interval tree
         merged_genome_interval_tree = GenomeIntervalTree()
@@ -175,24 +254,26 @@ class GenericCNVCallSet:
                         min(padded_variant.start, current_enveloping_interval.start),
                         max(padded_variant.end, current_enveloping_interval.end))
                 else:
-                    merged_variant = get_unpadded_merged_variant(current_overlapping_set)
+                    merged_variant = generate_consensus_variant(current_overlapping_set)
                     merged_interval_tree.addi(merged_variant.start, merged_variant.end, data=merged_variant)
                     current_overlapping_set.clear()
                     current_overlapping_set.add(padded_variant)
                     current_enveloping_interval = Interval(
                         padded_variant.contig, padded_variant.start, padded_variant.end)
             if len(current_overlapping_set) > 0:
-                merged_variant = get_unpadded_merged_variant(current_overlapping_set)
+                merged_variant = generate_consensus_variant(current_overlapping_set)
                 merged_interval_tree.addi(merged_variant.start, merged_variant.end,
                                           data=merged_variant)
 
             merged_genome_interval_tree[contig] = merged_interval_tree
 
-        merged_call_set = GenericCNVCallSet(self.sample_name)
-        merged_call_set.genomic_interval_tree = merged_genome_interval_tree
-
-        return merged_call_set
-
+        tags = self.tags.copy()
+        tags.add("Merged overlapping intervals with padding={0}, "
+                 "interval_consensus_strategy={1}, "
+                 "call_consensus_strategy={2}".format(
+                    padding, interval_consensus_strategy, call_consensus_strategy))
+        return GenericCNVCallSet.from_genome_interval_tree(
+            self.sample_name, merged_genome_interval_tree, tags)
 
 
 class TruthAndTrialVariants:
@@ -214,10 +295,10 @@ class CNVCallSetAnalysisSummary:
         # overlaps with a truth variant, has the same copy number call
         self.exact_matches: Set[TruthAndTrialVariants] = set()
 
-        # overlaps with a truth variant, copy number call is not the same as truth but both are dups
+        # overlaps with a truth variant, copy number call is not the same as truth but both are DUP
         self.qualitative_dup_matches: Set[TruthAndTrialVariants] = set()
 
-        # overlaps with a truth variant, copy number call is not the same as truth but both are dels
+        # overlaps with a truth variant, copy number call is not the same as truth but both are DEL
         self.qualitative_del_matches: Set[TruthAndTrialVariants] = set()
 
         # truth is dup(del) but call is del(dup)
@@ -274,7 +355,7 @@ class CNVCallSetAnalysisSummary:
 
     @property
     def sensitivity(self):
-        total_truth_calls = self.true_positive_count +  self.false_negative_count
+        total_truth_calls = self.true_positive_count + self.false_negative_count
         if total_truth_calls > 0:
             return float(self.true_positive_count) / total_truth_calls
         else:
@@ -293,6 +374,8 @@ class CNVCallSetAnalysisSummary:
                      min_trial_quality: Optional[float] = None,
                      max_truth_variant_frequency: Optional[float] = None,
                      max_trial_variant_frequency: Optional[float] = None,
+                     min_truth_variant_frequency: Optional[float] = None,
+                     min_trial_variant_frequency: Optional[float] = None,
                      contig_set: Optional[Set[str]] = None):
         """Filters the summary according to the provided arguments."""
 
@@ -303,15 +386,26 @@ class CNVCallSetAnalysisSummary:
                     continue
                 if min_trial_quality is not None and entry.trial_variant.quality_above_min_value(min_trial_quality):
                     continue
+
                 if (max_truth_variant_frequency is not None and
                         entry.truth_variant.variant_frequency_below_max_value(max_truth_variant_frequency)):
                     continue
                 if (max_trial_variant_frequency is not None and
                         entry.trial_variant.variant_frequency_below_max_value(max_trial_variant_frequency)):
                     continue
+
+                if (min_truth_variant_frequency is not None and
+                        entry.truth_variant.variant_frequency_above_min_value(min_truth_variant_frequency)):
+                    continue
+                if (min_trial_variant_frequency is not None and
+                        entry.trial_variant.variant_frequency_above_min_value(min_truth_variant_frequency)):
+                    continue
+
                 if contig_set is not None and entry.truth_variant.contig not in contig_set:
                     continue
+
                 output_set.add(entry)
+
             return output_set
 
         def get_filtered_truth_variants_set(input_set: Set[GenericCopyNumberVariant]):
@@ -319,12 +413,19 @@ class CNVCallSetAnalysisSummary:
             for entry in input_set:
                 if min_truth_quality is not None and entry.quality_above_min_value(min_truth_quality):
                     continue
+
                 if (max_truth_variant_frequency is not None and
                         entry.variant_frequency_below_max_value(max_truth_variant_frequency)):
                     continue
+                if (min_truth_variant_frequency is not None and
+                        entry.variant_frequency_above_min_value(min_truth_variant_frequency)):
+                    continue
+
                 if contig_set is not None and entry.contig not in contig_set:
                     continue
+
                 output_set.add(entry)
+
             return output_set
 
         def get_filtered_trial_variants_set(input_set: Set[GenericCopyNumberVariant]):
@@ -332,12 +433,19 @@ class CNVCallSetAnalysisSummary:
             for entry in input_set:
                 if min_trial_quality is not None and entry.quality_above_min_value(min_trial_quality):
                     continue
+
                 if (max_trial_variant_frequency is not None and
                         entry.variant_frequency_below_max_value(max_trial_variant_frequency)):
                     continue
+                if (min_trial_variant_frequency is not None and
+                        entry.variant_frequency_above_min_value(min_trial_variant_frequency)):
+                    continue
+
                 if contig_set is not None and entry.contig not in contig_set:
                     continue
+
                 output_set.add(entry)
+
             return output_set
 
         filtered_summary = CNVCallSetAnalysisSummary()
@@ -431,9 +539,9 @@ class CNVTrialCallSetEvaluator:
         self.min_overlap_fraction = min_overlap_fraction
         self.all_contigs = truth_call_set.contigs_set.union(trial_call_set.contigs_set)
 
-        if exclusion_criterion == "partial_overlap":
+        if exclusion_criterion == 'partial_overlap':
             self.strict = False
-        elif exclusion_criterion == "full_overlap":
+        elif exclusion_criterion == 'full_overlap':
             self.strict = True
         else:
             raise Exception("Unknown exclusion criterion; choices: 'partial_overlap', 'full_overlap'")
