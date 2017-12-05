@@ -10,7 +10,8 @@ class GenericCopyNumberVariant(Interval):
     """This class represent a generic CNV locus.
 
     Note:
-        Equality testing and hashing is done based similarly to Interval.
+        Equality testing and hashing is done similarly to 'Interval', i.e. calls and other
+        annotations are ignored.
     """
     def __init__(self,
                  contig: str, start: int, end: int,
@@ -398,7 +399,7 @@ class CNVCallSetAnalysisSummary:
                         entry.truth_variant.variant_frequency_above_min_value(min_truth_variant_frequency)):
                     continue
                 if (min_trial_variant_frequency is not None and
-                        entry.trial_variant.variant_frequency_above_min_value(min_truth_variant_frequency)):
+                        entry.trial_variant.variant_frequency_above_min_value(min_trial_variant_frequency)):
                     continue
 
                 if contig_set is not None and entry.truth_variant.contig not in contig_set:
