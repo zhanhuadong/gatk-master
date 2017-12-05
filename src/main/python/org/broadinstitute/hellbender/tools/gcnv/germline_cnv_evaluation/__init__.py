@@ -1,1 +1,2 @@
 from .core import GenericCopyNumberVariant, CNVTrialCallSetEvaluator, CNVCallSetAnalysisSummary, GenericCNVCallSet
+from .io_genome_strip import load_genome_strip_vcf_file
