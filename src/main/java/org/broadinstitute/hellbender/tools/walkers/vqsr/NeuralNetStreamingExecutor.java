@@ -18,11 +18,16 @@ import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.python.StreamingPythonScriptExecutor;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.io.Resource;
+import org.broadinstitute.hellbender.utils.runtime.AsynchronousStreamWriterService;
+import org.broadinstitute.hellbender.utils.runtime.ProcessOutput;
+import org.broadinstitute.hellbender.utils.runtime.StreamOutput;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by sam on 11/17/17.
@@ -51,18 +56,22 @@ public class NeuralNetStreamingExecutor extends VariantWalker {
     @Argument(fullName = "pythonBatchSize", shortName = "pbs", doc = "Size of batches for python to do inference.", optional = true)
     private int pythonBatchSize = 256;
 
+    @Argument(fullName = "pythonSyncFrequency", shortName = "sbs", doc = "Size of data to queue for Python streaming.", optional = true)
+    private int pythonSyncFrequency = 1024;
+
     // Create the Python executor. This doesn't actually start the Python process, but verifies that
     // the requestedPython executable exists and can be located.
     final StreamingPythonScriptExecutor pythonExecutor = new StreamingPythonScriptExecutor(true);
 
-    private FileWriter fifoWriter;
+    private FileOutputStream fifoWriter;
     private VariantContextWriter vcfWriter;
+    private AsynchronousStreamWriterService<String> asyncWriter = null;
+    private List<String> batchList = new ArrayList<>(pythonBatchSize);
+    private boolean waitforBatchCompletion = false;
 
     private boolean noSamples = true;
     private int curBatchSize = 0;
-    private String pythonCommand = "";
 
-    long totalLength = 0L;
 
     @Override
     public boolean requiresReference(){
@@ -89,7 +98,7 @@ public class NeuralNetStreamingExecutor extends VariantWalker {
 
         // Start the Python process, and get a FIFO from the executor to use to send data to Python. The lifetime
         // of the FIFO is managed by the executor; the FIFO will be destroyed when the executor is destroyed.
-        pythonExecutor.start(Collections.emptyList(), false);
+        pythonExecutor.start(Collections.emptyList(), true);
         final File fifoFile = pythonExecutor.getFIFOForWrite();
 
         // Open the FIFO for writing. Opening a FIFO for read or write will block until there is reader/writer
@@ -98,10 +107,16 @@ public class NeuralNetStreamingExecutor extends VariantWalker {
         // we open the FIFO. We can then call getAccumulatedOutput.
         pythonExecutor.sendAsynchronousCommand(String.format("fifoFile = open('%s', 'r')" + NL, fifoFile.getAbsolutePath()));
         try {
-            fifoWriter = new FileWriter(fifoFile);
+            fifoWriter = new FileOutputStream(fifoFile);
+            //fifoWriter = new FileOutputStream(new File("preprocessed.txt"));
         } catch ( IOException e ) {
             throw new GATKException("Failure opening FIFO for writing", e);
         }
+
+        // start the asynchronousStreamWriter FIFO
+        // now write data to the fifo and round trip to python ROUND_TRIP_COUNT times
+        asyncWriter = pythonExecutor.getAsynchronousStreamWriterService(fifoWriter, AsynchronousStreamWriterService.stringSerializer);
+        batchList = new ArrayList<>(pythonSyncFrequency);
 
         // Also, ask Python to open our output file, where it will write the contents of everything it reads
         // from the FIFO. <code sendSynchronousCommand/>
@@ -136,30 +151,29 @@ public class NeuralNetStreamingExecutor extends VariantWalker {
                         genos,
                         isSnp);
 
-                int len = outDat.length();
-                if((totalLength + len) >= (7 * 1024)){
-                    try {
-                        fifoWriter.flush();
-                        pythonCommand = String.format("vqsr_cnn.score_and_write_batch(model, tempFile, fifoFile, %d, %d)", curBatchSize, pythonBatchSize) + NL;
-                        pythonExecutor.sendSynchronousCommand(pythonCommand);
-                        curBatchSize = 0;
-                    } catch (IOException e) {
-                        throw new GATKException("Failure flushing FIFO", e);
+                if (curBatchSize == pythonSyncFrequency) {
+                    // wait for the last batch to complete before we start a new one
+                    if (waitforBatchCompletion == true) {
+                        asyncWriter.waitForPreviousBatchCompletion(1, TimeUnit.MINUTES);
+                        waitforBatchCompletion = false;
+                        pythonExecutor.getAccumulatedOutput();
                     }
-                    totalLength = 0;
+                    final String pythonCommand = String.format(
+                            "vqsr_cnn.score_and_write_batch(model, tempFile, fifoFile, %d, %d)", curBatchSize, pythonBatchSize) + NL;
+//                        final String pythonCommand = String.format(
+//                                "for i in range(%d):\n    tempFile.write(fifoFile.readline())", numberToRead) + NL + NL;
+                    pythonExecutor.sendAsynchronousCommand(pythonCommand);
+                    asyncWriter.startAsynchronousBatchWrite(batchList);
+                    waitforBatchCompletion = true;
                     curBatchSize = 0;
+                    batchList = new ArrayList<>(pythonSyncFrequency);
                 }
-
-                // write summary data to the FIFO
-                fifoWriter.write(outDat);
-                totalLength += len;
+                //bufferedFIFO.enqueue(outDat);
+                batchList.add(outDat);
                 curBatchSize++;
             } catch (UnsupportedEncodingException e) {
                 throw new GATKException("Trying to make string from reference, but unsupported encoding UTF-8.", e);
-            } catch (IOException e) {
-                throw new GATKException("Failure writing to FIFO", e);
             }
-
         }
     }
 
@@ -209,15 +223,18 @@ public class NeuralNetStreamingExecutor extends VariantWalker {
 
     @Override
     public Object onTraversalSuccess() {
-        if(curBatchSize > 0){
-            try {
-                fifoWriter.flush();
-                pythonCommand = String.format("vqsr_cnn.score_and_write_batch(model, tempFile, fifoFile, %d, %d)", curBatchSize, pythonBatchSize) + NL;
-                pythonExecutor.sendSynchronousCommand(pythonCommand);
-                curBatchSize = 0;
-            } catch (IOException e) {
-                throw new GATKException("Failure flushing FIFO", e);
-            }
+        if (waitforBatchCompletion == true) {
+            asyncWriter.waitForPreviousBatchCompletion(1, TimeUnit.MINUTES);
+            pythonExecutor.getAccumulatedOutput();
+            waitforBatchCompletion = false;
+        }
+        if (curBatchSize > 0){
+            final String pythonCommand = String.format(
+                    "vqsr_cnn.score_and_write_batch(model, tempFile, fifoFile, %d, %d)", curBatchSize, pythonBatchSize) + NL;
+            pythonExecutor.sendAsynchronousCommand(pythonCommand);
+            asyncWriter.startAsynchronousBatchWrite(batchList);
+            asyncWriter.waitForPreviousBatchCompletion(1, TimeUnit.MINUTES);
+            pythonExecutor.getAccumulatedOutput();
         }
 
         pythonExecutor.sendSynchronousCommand("tempFile.close()" + NL);
