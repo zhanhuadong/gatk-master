@@ -21,6 +21,7 @@ WORKDIR /gatk
 # Create a simple unit test runner
 ENV CI true
 RUN echo "source activate gatk" > /root/run_unit_tests.sh && \
+    echo "export DOCKER_TEST=\"true\"" >> /root/run_unit_tests.sh && \
     echo "cd /gatk/ && /gatksrc/gradlew jacocoTestReport -p /gatksrc " >> /root/run_unit_tests.sh
 
 WORKDIR /root
@@ -40,6 +41,7 @@ RUN mkdir $DOWNLOAD_DIR && \
     bash $DOWNLOAD_DIR/miniconda.sh -p $CONDA_PATH -b && \
     rm $DOWNLOAD_DIR/miniconda.sh
 ENV PATH $CONDA_PATH/envs/gatk/bin:$CONDA_PATH/bin:$PATH
+RUN mkdir /gatk/scripts
 RUN conda env create -n gatk -f /gatk/scripts/gatkcondaenv.yml && \
     echo "source activate gatk" >> /gatk/gatkenv.rc
 
