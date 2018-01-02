@@ -24,12 +24,15 @@ Syntax
     -s [GCS_SAVE_PATH] or --save [GCS_SAVE_PATH]
       save results in specified bucket/folder
       (defaults to \$PROJECT_NAME/\$GCS_USER)
-    -t [MAX_LIFE] or --life:
+    -t [MAX_LIFE] or --life [MAX_LIFE]:
       life time of cluster
       (defaults to \$CLUSTER_MAX_LIFE_HOURS)
-    -d [MAX_IDLE] or --idle:
+    -d [MAX_IDLE] or --idle [MAX_IDLE]:
       maximum idling time for cluster
       (defaults to \$CLUSTER_MAX_IDLE_MINUTES)
+    -L [TOOL_NAME] or --launch-tool [TOOL_NAME]
+      specify GATK_SV_TOOL to launch
+      (defaults to "StructuralVariationDiscoveryPipelineSpark")
 
   Mandatory Positional Arguments:
     GATK_Folder: path to local copy of GATK
@@ -65,6 +68,9 @@ throw_error() {
 
 QUIET=${SV_QUIET:-"N"}
 GCS_USER=${GCS_USER:-${USER}}
+CLUSTER_MAX_LIFE_HOURS=${CLUSTER_MAX_LIFE_HOURS:-4h}
+CLUSTER_MAX_IDLE_MINUTES=${CLUSTER_MAX_IDLE_MINUTES:-60m}
+GATK_SV_TOOL=${GATK_SV_TOOL:-"StructuralVariationDiscoveryPipelineSpark"}
 
 while [ $# -ge 1 ]; do
     case $1 in
@@ -136,6 +142,18 @@ while [ $# -ge 1 ]; do
             CLUSTER_MAX_IDLE_MINUTES=${1#*=} # remove everything up to = and assign rest to idle
             shift
             ;;
+        --L|--launch-tool)
+            if [ $# -ge 2 ]; then
+                GATK_SV_TOOL="$2"
+                shift 2
+            else
+                throw_error "--launch-tool requires a non-empty argument"
+            fi
+            ;;
+        --launch-tool=?*)
+            GATK_SV_TOOL=${1#*=} # remove everything up to = and assign rest to GATK_SV_TOOL
+            shift
+            ;;
         --)   # explicit call to end of all options
             shift
             break
@@ -153,9 +171,6 @@ if [ $# -lt 4 ]; then
   show_help
   exit 1
 fi
-
-CLUSTER_MAX_LIFE_HOURS=${CLUSTER_MAX_LIFE_HOURS:-4h}
-CLUSTER_MAX_IDLE_MINUTES=${CLUSTER_MAX_IDLE_MINUTES:-60m}
 
 # init variables that MUST be defined
 GATK_DIR="$1"
@@ -235,7 +250,11 @@ OUTPUT_DIR="/results/$(date "+%Y-%m-%d_%H.%M.%S")-${GIT_BRANCH}-${GATK_GIT_HASH}
 while true; do
     echo "#############################################################" 2>&1 | tee -a ${LOCAL_LOG_FILE}
     if [ "${QUIET}" == "Y" ]; then
-        yn="Y"
+        if gcloud dataproc clusters list --project=${PROJECT_NAME} | grep -q ${CLUSTER_NAME}; then
+            yn="N"
+        else
+            yn="Y"
+        fi
     else
         read -p "Create cluster? (yes/no/cancel)" yn
     fi
@@ -270,7 +289,7 @@ while true; do
     case $yn in
         [Yy]*)  SECONDS=0
                 echo "runWholePipeline.sh ${GATK_DIR} ${CLUSTER_NAME} ${OUTPUT_DIR} ${GCS_BAM} ${GCS_REFERENCE_2BIT} ${GCS_REFERENCE_IMAGE}${SV_ARGS} 2>&1 | tee -a ${LOCAL_LOG_FILE}" | tee -a ${LOCAL_LOG_FILE}
-                runWholePipeline.sh ${GATK_DIR} ${CLUSTER_NAME} ${OUTPUT_DIR} ${GCS_BAM} ${GCS_REFERENCE_2BIT} ${GCS_REFERENCE_IMAGE}${SV_ARGS} 2>&1 | tee -a ${LOCAL_LOG_FILE}
+                GATK_SV_TOOL=${GATK_SV_TOOL} runWholePipeline.sh ${GATK_DIR} ${CLUSTER_NAME} ${OUTPUT_DIR} ${GCS_BAM} ${GCS_REFERENCE_2BIT} ${GCS_REFERENCE_IMAGE}${SV_ARGS} 2>&1 | tee -a ${LOCAL_LOG_FILE}
                 printf 'Pipeline completed in %02dh:%02dm:%02ds\n' $((${SECONDS}/3600)) $((${SECONDS}%3600/60)) $((${SECONDS}%60))
                 break
                 ;;
