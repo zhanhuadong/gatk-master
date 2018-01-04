@@ -15,6 +15,7 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.WellformedReadFilter;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 
 import java.util.ArrayList;
@@ -163,20 +164,20 @@ public abstract class AssemblyRegionWalkerSpark extends GATKSparkTool {
             final int assemblyRegionPadding,
             final double activeProbThreshold,
             final int maxProbPropagationDistance) {
-        return (FlatMapFunction<Shard<GATKRead>, AssemblyRegionWalkerContext>) shardedRead -> {
-            SimpleInterval paddedInterval = shardedRead.getPaddedInterval();
-            SimpleInterval assemblyRegionPaddedInterval = paddedInterval.expandWithinContig(assemblyRegionPadding, sequenceDictionary);
+        return (FlatMapFunction<MultiIntervalShard<GATKRead>, AssemblyRegionWalkerContext>) shardedRead -> {
+            final SimpleInterval paddedInterval = shardedRead.getPaddedInterval();
+            final SimpleInterval assemblyRegionPaddedInterval = paddedInterval.expandWithinContig(assemblyRegionPadding, sequenceDictionary);
 
-            ReferenceDataSource reference = bReferenceSource == null ? null :
+            final ReferenceDataSource reference = bReferenceSource == null ? null :
                     new ReferenceMemorySource(bReferenceSource.getValue().getReferenceBases(assemblyRegionPaddedInterval), sequenceDictionary);
-            FeatureManager features = bFeatureManager == null ? null : bFeatureManager.getValue();
+            final FeatureManager features = bFeatureManager == null ? null : bFeatureManager.getValue();
 
             final Iterator<AssemblyRegion> assemblyRegionIter = new AssemblyRegionIterator(shardedRead,
                     header, reference, features, evaluator,
                     minAssemblyRegionSize, maxAssemblyRegionSize, assemblyRegionPadding, activeProbThreshold,
-                    maxProbPropagationDistance);
-            Iterable<AssemblyRegion> assemblyRegions = () -> assemblyRegionIter;
-            return StreamSupport.stream(assemblyRegions.spliterator(), false).map(assemblyRegion ->
+                    maxProbPropagationDistance, true);
+            final Iterable<AssemblyRegion> assemblyRegions = () -> assemblyRegionIter;
+            return Utils.stream(assemblyRegions).map(assemblyRegion ->
                     new AssemblyRegionWalkerContext(assemblyRegion,
                         new ReferenceContext(reference, assemblyRegion.getExtendedSpan()),
                         new FeatureContext(features, assemblyRegion.getExtendedSpan()))).iterator();
