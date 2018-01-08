@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * A Spark version of {@link AssemblyRegionWalker}. Subclasses should implement {@link #processAssemblyRegions(JavaRDD, JavaSparkContext)}
@@ -164,7 +163,7 @@ public abstract class AssemblyRegionWalkerSpark extends GATKSparkTool {
             final int assemblyRegionPadding,
             final double activeProbThreshold,
             final int maxProbPropagationDistance) {
-        return (FlatMapFunction<MultiIntervalShard<GATKRead>, AssemblyRegionWalkerContext>) shardedRead -> {
+        return (FlatMapFunction<Shard<GATKRead>, AssemblyRegionWalkerContext>) shardedRead -> {
             final SimpleInterval paddedInterval = shardedRead.getPaddedInterval();
             final SimpleInterval assemblyRegionPaddedInterval = paddedInterval.expandWithinContig(assemblyRegionPadding, sequenceDictionary);
 
@@ -172,7 +171,8 @@ public abstract class AssemblyRegionWalkerSpark extends GATKSparkTool {
                     new ReferenceMemorySource(bReferenceSource.getValue().getReferenceBases(assemblyRegionPaddedInterval), sequenceDictionary);
             final FeatureManager features = bFeatureManager == null ? null : bFeatureManager.getValue();
 
-            final Iterator<AssemblyRegion> assemblyRegionIter = new AssemblyRegionIterator(shardedRead,
+            final Iterator<AssemblyRegion> assemblyRegionIter = new AssemblyRegionIterator(
+                    new ShardToMultiIntervalShardAdapter<>(shardedRead),
                     header, reference, features, evaluator,
                     minAssemblyRegionSize, maxAssemblyRegionSize, assemblyRegionPadding, activeProbThreshold,
                     maxProbPropagationDistance, true);
