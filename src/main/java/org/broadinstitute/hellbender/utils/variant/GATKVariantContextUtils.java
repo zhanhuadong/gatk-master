@@ -325,19 +325,11 @@ public final class GATKVariantContextUtils {
      * @return
      */
     public static boolean isTandemRepeat(final VariantContext vc, final byte[] refBasesStartingAtVCWithPad) {
-        final String refBasesStartingAtVCWithoutPad = new String(refBasesStartingAtVCWithPad).substring(1);
         if ( ! vc.isIndel() ) // only indels are tandem repeats
             return false;
-
+        final String refBasesStartingAtVCWithoutPad = new String(refBasesStartingAtVCWithPad).substring(1);
         final Allele ref = vc.getReference();
-
-        for ( final Allele allele : vc.getAlternateAlleles() ) {
-            if ( ! isRepeatAllele(ref, allele, refBasesStartingAtVCWithoutPad) )
-                return false;
-        }
-
-        // we've passed all of the tests, so we are a repeat
-        return true;
+        return vc.getAlternateAlleles().stream().allMatch(allele -> isRepeatAllele(ref, allele, refBasesStartingAtVCWithoutPad));
     }
 
     /**
