@@ -384,25 +384,20 @@ public final class GATKVariantContextUtils {
            Consider case where ref =ATATAT and we have an insertion of ATAT. Natural description is (AT)3 -> (AT)2.
          */
 
-        byte[] longB;
         // find first repeat unit based on either ref or alt, whichever is longer
-        if (altBases.length > refBases.length)
-            longB = altBases;
-        else
-            longB = refBases;
+        final byte[] longB = altBases.length > refBases.length ? altBases : refBases;
 
         // see if non-null allele (either ref or alt, whichever is longer) can be decomposed into several identical tandem units
         // for example, -*,CACA needs to first be decomposed into (CA)2
         final int repeatUnitLength = findRepeatedSubstring(longB);
         final byte[] repeatUnit = Arrays.copyOf(longB, repeatUnitLength);
-
-        final int[] repetitionCount = new int[2];
+        
         // look for repetitions forward on the ref bases (i.e. starting at beginning of ref bases)
         int repetitionsInRef = findNumberOfRepetitions(repeatUnit, refBases, true);
-        repetitionCount[0] = findNumberOfRepetitions(repeatUnit, ArrayUtils.addAll(refBases, remainingRefContext), true)-repetitionsInRef;
-        repetitionCount[1] = findNumberOfRepetitions(repeatUnit, ArrayUtils.addAll(altBases, remainingRefContext), true)-repetitionsInRef;
+        final int refRepetitionCount = findNumberOfRepetitions(repeatUnit, ArrayUtils.addAll(refBases, remainingRefContext), true)-repetitionsInRef;
+        final int altRepetitionCount = findNumberOfRepetitions(repeatUnit, ArrayUtils.addAll(altBases, remainingRefContext), true)-repetitionsInRef;
 
-        return new MutablePair<>(repetitionCount, repeatUnit);
+        return new MutablePair<>(new int[] {refRepetitionCount, altRepetitionCount}, repeatUnit);
 
     }
 
