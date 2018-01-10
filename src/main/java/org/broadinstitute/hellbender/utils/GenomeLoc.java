@@ -427,17 +427,10 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * @return one merged loc
      */
     public static <T extends GenomeLoc> GenomeLoc merge(final SortedSet<T> sortedLocs) {
-        GenomeLoc result = null;
         Utils.validateArg(sortedLocs.stream().noneMatch(GenomeLoc::isUnmapped), "Tried to merge unmapped genome locs");
-
+        GenomeLoc result = null;
         for ( final GenomeLoc loc : sortedLocs ) {
-            if ( result == null ) {
-                result = loc;
-            } else if ( !result.contiguousP(loc) ) {
-                throw new GATKException("The genome locs need to be contiguous");
-            } else {
-                result = merge(result, loc);
-            }
+            result = result == null ? loc : merge(result, loc);
         }
 
         return result;
