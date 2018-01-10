@@ -1011,7 +1011,7 @@ public final class IntervalUtils {
         GenomeLoc last = null;
         List<GenomeLoc> contigLocs = null;
         for (final GenomeLoc loc: sorted) {
-            if (GenomeLoc.isUnmapped(loc)) {
+            if (loc.isUnmapped()) {
                 continue;
             }
             if (last == null || !last.onSameContig(loc)) {

@@ -422,7 +422,7 @@ public final class GenomeLocParser {
      * @return The contiguous loc of up to maxBasePairs length or null if the loc is already at the start of the contig.
      */
     public GenomeLoc createGenomeLocAtStart(final GenomeLoc loc, final int maxBasePairs) {
-        if (GenomeLoc.isUnmapped(loc))
+        if (loc.isUnmapped())
             return null;
         final String contigName = loc.getContig();
         final SAMSequenceRecord contig = contigInfo.getSequence(contigName);
@@ -446,10 +446,8 @@ public final class GenomeLocParser {
      * @return The contiguous loc of length up to the original length + 2*padding (depending on the start/end of the contig).
      */
     public GenomeLoc createPaddedGenomeLoc(final GenomeLoc loc, final int padding) {
-        if (GenomeLoc.isUnmapped(loc) || padding == 0)
-            return loc;
-        else
-            return createGenomeLocOnContig(loc.getContig(), loc.getContigIndex(), loc.getStart() - padding, loc.getStop() + padding);
+        return loc.isUnmapped() || padding == 0 ? loc :
+                createGenomeLocOnContig(loc.getContig(), loc.getContigIndex(), loc.getStart() - padding, loc.getStop() + padding);
     }
 
     /**
@@ -459,7 +457,7 @@ public final class GenomeLocParser {
      * @return The contiguous loc of up to maxBasePairs length or null if the loc is already at the end of the contig.
      */
     public GenomeLoc createGenomeLocAtStop(final GenomeLoc loc, final int maxBasePairs) {
-        if (GenomeLoc.isUnmapped(loc))
+        if (loc.isUnmapped())
             return null;
         String contigName = loc.getContig();
         SAMSequenceRecord contig = contigInfo.getSequence(contigName);

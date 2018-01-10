@@ -36,10 +36,6 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     public static final GenomeLoc UNMAPPED = new GenomeLoc((String)null);
     public static final GenomeLoc WHOLE_GENOME = new GenomeLoc("all");
 
-    public static final boolean isUnmapped(final GenomeLoc loc) {
-        return loc == UNMAPPED;
-    }
-
     // --------------------------------------------------------------------------------------------------------------
     //
     // constructors
@@ -91,7 +87,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     public final int getStop()     { return this.stop; }
 
     public final String toString()  {
-        if(GenomeLoc.isUnmapped(this)) {
+        if(isUnmapped()) {
             return "unmapped";
         }
         if ( throughEndOfContigP() && atBeginningOfContigP() ) {
@@ -128,7 +124,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * @return
      */
     public final boolean isUnmapped() {
-        return isUnmapped(this);
+        return this == UNMAPPED;
     }
 
 
@@ -137,8 +133,8 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * this and that GenomeLoc are contiguous and both mapped
      */
     public GenomeLoc merge( final GenomeLoc that ) throws GATKException {
-        if(GenomeLoc.isUnmapped(this) || GenomeLoc.isUnmapped(that)) {
-            if(! GenomeLoc.isUnmapped(this) || !GenomeLoc.isUnmapped(that)) {
+        if(this.isUnmapped() || that.isUnmapped()) {
+            if(! this.isUnmapped() || !that.isUnmapped()) {
                 throw new GATKException("Tried to merge a mapped and an unmapped genome loc");
             }
             return UNMAPPED;
@@ -168,8 +164,8 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     public GenomeLoc union( final GenomeLoc that ) { return merge(that); }
 
     public GenomeLoc intersect( final GenomeLoc that ) throws GATKException {
-        if(GenomeLoc.isUnmapped(this) || GenomeLoc.isUnmapped(that)) {
-            if(! GenomeLoc.isUnmapped(this) || !GenomeLoc.isUnmapped(that)) {
+        if(this.isUnmapped() || that.isUnmapped()) {
+            if(! this.isUnmapped() || !that.isUnmapped()) {
                 throw new GATKException("Tried to intersect a mapped and an unmapped genome loc");
             }
             return UNMAPPED;
@@ -185,8 +181,8 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     }
 
     public final List<GenomeLoc> subtract( final GenomeLoc that ) {
-        if(GenomeLoc.isUnmapped(this) || GenomeLoc.isUnmapped(that)) {
-            if(! GenomeLoc.isUnmapped(this) || !GenomeLoc.isUnmapped(that)) {
+        if(this.isUnmapped() || that.isUnmapped()) {
+            if(! this.isUnmapped() || !that.isUnmapped()) {
                 throw new GATKException("Tried to intersect a mapped and an unmapped genome loc");
             }
             return Arrays.asList(UNMAPPED);
@@ -370,9 +366,9 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
         if ( this == that ) {
             result = 0;
         }
-        else if(GenomeLoc.isUnmapped(this)) {
+        else if(this.isUnmapped()) {
             result = 1;
-        } else if(GenomeLoc.isUnmapped(that)) {
+        } else if(that.isUnmapped()) {
             result = -1;
         } else {
             final int cmpContig = compareContigs(that);
@@ -450,7 +446,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * @return one merged loc
      */
     public static <T extends GenomeLoc> GenomeLoc merge(final T a, final T b) {
-        if ( isUnmapped(a) || isUnmapped(b) ) {
+        if ( a.isUnmapped() || b.isUnmapped() ) {
             throw new GATKException("Tried to merge unmapped genome locs");
         }
 
@@ -556,7 +552,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * this and that GenomeLoc are both mapped.
      */
     public GenomeLoc endpointSpan(final GenomeLoc that) {
-        Utils.validateArg(!isUnmapped(this) && !isUnmapped(that), "Cannot get endpoint span for unmerged genome locs");
+        Utils.validateArg(!this.isUnmapped() && !that.isUnmapped(), "Cannot get endpoint span for unmerged genome locs");
         Utils.validateArg(this.getContig().equals(that.getContig()), "Cannot get endpoint span for genome locs on different contigs");
 
         return new GenomeLoc(getContig(),this.contigIndex,Math.min(getStart(),that.getStart()),Math.max(getStop(),that.getStop()));
