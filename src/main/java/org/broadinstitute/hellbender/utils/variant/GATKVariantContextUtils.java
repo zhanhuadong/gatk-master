@@ -113,44 +113,35 @@ public final class GATKVariantContextUtils {
      *     No event overlaps an unmapped region.
      * </p>
      *
-     * @param variantContext variant-context to test the overlap with.
+     * @param vc variant-context to test the overlap with.
      * @param region region to test the overlap with.
      *
      * @throws IllegalArgumentException if either region or event is {@code null}.
      *
      * @return {@code true} if there is an overlap between the event described and the active region provided.
      */
-    public static boolean overlapsRegion(final VariantContext variantContext, final GenomeLoc region) {
+    public static boolean overlapsRegion(final VariantContext vc, final GenomeLoc region) {
         Utils.nonNull(region, "the active region is null");
-        Utils.nonNull(variantContext);
+        Utils.nonNull(vc);
 
-        if (region.isUnmapped())
-            return false;
-        if (variantContext.getEnd() < region.getStart())
-            return false;
-        if (variantContext.getStart() > region.getStop())
-            return false;
-        return variantContext.getContig().equals(region.getContig());
+        return  !region.isUnmapped() && region.getStart() <= vc.getEnd() && vc.getStart() <= region.getStop()
+                && vc.getContig().equals(region.getContig());
     }
 
     /**
      * Checks whether a variant-context overlaps with a region.
      *
-     * @param variantContext variant-context to test the overlap with.
+     * @param vc variant-context to test the overlap with.
      * @param region region to test the overlap with.
      *
      * @throws IllegalArgumentException if either region or event is {@code null}.
      *
      * @return {@code true} if there is an overlap between the event described and the active region provided.
      */
-    public static boolean overlapsRegion(final VariantContext variantContext, final SimpleInterval region) {
+    public static boolean overlapsRegion(final VariantContext vc, final SimpleInterval region) {
         Utils.nonNull(region, "the active region is null");
-        Utils.nonNull(variantContext);
-        if (variantContext.getEnd() < region.getStart())
-            return false;
-        if (variantContext.getStart() > region.getEnd())
-            return false;
-        return variantContext.getContig().equals(region.getContig());
+        Utils.nonNull(vc);
+        return region.getStart() <= vc.getEnd() && vc.getStart() <= region.getEnd() && vc.getContig().equals(region.getContig());
     }
 
     private static boolean hasPLIncompatibleAlleles(final Collection<Allele> alleleSet1, final Collection<Allele> alleleSet2) {
