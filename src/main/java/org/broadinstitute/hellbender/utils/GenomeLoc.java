@@ -6,6 +6,7 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Genome location representation.  It is *** 1 *** based closed.  Note that GenomeLocs start and stop values
@@ -168,70 +169,24 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
         Utils.validateArg(this.isUnmapped() == that.isUnmapped(), "Tried to merge a mapped and an unmapped genome loc");
         if (this.isUnmapped()) {
             return Arrays.asList(UNMAPPED);
+        } else if (this.equals(that)) {
+            return Collections.emptyList();
         }
         Utils.validateArg(this.overlapsP(that), "The two genome loc's need to overlap");
 
-        if (equals(that)) {
-            return Collections.emptyList();
-        } else if (containsP(that)) {
-            final List<GenomeLoc> l = new ArrayList<>(2);
-
-            /**
-             * we have to create two new region, one for the before part, one for the after
-             * The old region:
-             * |----------------- old region (g) -------------|
-             *        |----- to delete (e) ------|
-             *
-             * product (two new regions):
-             * |------|  + |--------|
-             *
-             */
-            final int afterStop = this.getStop();
-            final int afterStart = that.getStop() + 1;
-            final int beforeStop = that.getStart() - 1;
-            final int beforeStart = this.getStart();
-            if (afterStop - afterStart >= 0) {
-                final GenomeLoc after = new GenomeLoc(this.getContig(), getContigIndex(), afterStart, afterStop);
-                l.add(after);
-            }
-            if (beforeStop - beforeStart >= 0) {
-                final GenomeLoc before = new GenomeLoc(this.getContig(), getContigIndex(), beforeStart, beforeStop);
-                l.add(before);
-            }
-
-            return l;
-        } else if (that.containsP(this)) {
-            /**
-             * e completely contains g, delete g, but keep looking, there may be more regions
-             * i.e.:
-             *   |--------------------- e --------------------|
-             *       |--- g ---|    |---- others ----|
-             */
-            return Collections.emptyList();   // don't need to do anything
-        } else {
-            /**
-             * otherwise e overlaps some part of g
-             *
-             * figure out which region occurs first on the genome.  I.e., is it:
-             * |------------- g ----------|
-             *       |------------- e ----------|
-             *
-             * or:
-             *       |------------- g ----------|
-             * |------------ e -----------|
-             *
-             */
-
-            final GenomeLoc n;
-            if (that.getStart() < this.getStart()) {
-                n = new GenomeLoc(this.getContig(), getContigIndex(), that.getStop() + 1, this.getStop());
-            } else {
-                n = new GenomeLoc(this.getContig(), getContigIndex(), this.getStart(), that.getStart() - 1);
-            }
-
-            // replace g with the new region
-            return Arrays.asList(n);
-        }
+        /**
+         * |----------------- old region (g) -------------|
+         *        |----- to delete (e) ------|
+         *
+         * yields
+         * |------|             and           |--------|
+         *
+         * If e starts at or before g the left interval has non-positive size.  Similarly, if e ends at or after g the right
+         * interval has non-positive size.  So we produce two candidate locs and then filter by size to get 0, 1, or 2 final locs.
+         */
+        final GenomeLoc leftLoc = new GenomeLoc(this.getContig(), getContigIndex(), this.getStart(), that.getStart() - 1);
+        final GenomeLoc rightLoc = new GenomeLoc(getContig(), getContigIndex(), that.getStop() + 1, this.getStop());
+        return Arrays.asList(leftLoc, rightLoc).stream().filter(loc -> loc.size() > 0).collect(Collectors.toList());
     }
 
     public final boolean containsP(final GenomeLoc that) {
