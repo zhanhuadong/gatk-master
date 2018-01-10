@@ -472,8 +472,8 @@ public final class GATKVariantContextUtils {
      * @return  Number of repetitions (0 if testString is not a concatenation of n repeatUnit's, including the case of empty testString)
      */
     public static int findNumberOfRepetitions(final byte[] repeatUnitFull, final int offsetInRepeatUnitFull, final int repeatUnitLength, final byte[] testStringFull, final int offsetInTestStringFull, final int testStringLength, final boolean leadingRepeats) {
-        Utils.nonNull(repeatUnitFull, "repeatUnit");
-        Utils.nonNull(testStringFull, "testString");
+        Utils.nonNull(repeatUnitFull);
+        Utils.nonNull(testStringFull);
         Utils.validIndex(offsetInRepeatUnitFull, repeatUnitFull.length);
         Utils.validateArg(repeatUnitLength >= 0 && repeatUnitLength <= repeatUnitFull.length, "repeatUnitLength");
         if (testStringLength == 0){
@@ -663,13 +663,9 @@ public final class GATKVariantContextUtils {
         final Map<String, Object> attributes = new LinkedHashMap<>();
         final Set<String> inconsistentAttributes = new LinkedHashSet<>();
         final Set<String> variantSources = new LinkedHashSet<>(); // contains the set of sources we found in our set of VCs that are variant
-        final Set<String> rsIDs = new LinkedHashSet<>(1); // most of the time there's one id
 
-        VariantContext longestVC = first;
-        int depth = 0;
         int maxAC = -1;
         final Map<String, Object> attributesWithMaxAC = new LinkedHashMap<>();
-        double log10PError = CommonInfo.NO_LOG10_PERROR;
         boolean anyVCHadFiltersApplied = false;
         VariantContext vcWithMaxAC = null;
         GenotypesContext genotypes = GenotypesContext.create();
@@ -679,38 +675,22 @@ public final class GATKVariantContextUtils {
 
         boolean remapped = false;
 
+        Utils.validateArg(VCs.stream().mapToInt(VariantContext::getStart).distinct().count() <= 1, "BUG: attempting to merge VariantContexts with different start sites");
+
         // cycle through and add info from the other VCs, making sure the loc/reference matches
         for ( final VariantContext vc : VCs ) {
-            Utils.validate(longestVC.getStart() == vc.getStart(), () -> "BUG: attempting to merge VariantContexts with different start sites: first="+ first.toString() + " second=" + vc.toString());
-
-            if ( VariantContextUtils.getSize(vc) > VariantContextUtils.getSize(longestVC) )
-                longestVC = vc; // get the longest location
-
             nFiltered += vc.isFiltered() ? 1 : 0;
             if ( vc.isVariant() ) variantSources.add(vc.getSource());
 
             AlleleMapper alleleMapping = resolveIncompatibleAlleles(refAllele, vc, alleles);
             remapped = remapped || alleleMapping.needsRemapping();
-
             alleles.addAll(alleleMapping.values());
-
             mergeGenotypes(genotypes, vc, alleleMapping, genotypeMergeOptions == GenotypeMergeType.UNIQUIFY);
-
-            // We always take the QUAL of the first VC with a non-MISSING qual for the combined value
-            if ( log10PError == CommonInfo.NO_LOG10_PERROR )
-                log10PError =  vc.getLog10PError();
 
             filters.addAll(vc.getFilters());
             anyVCHadFiltersApplied |= vc.filtersWereApplied();
 
-            //
             // add attributes
-            //
-            // special case DP (add it up) and ID (just preserve it)
-            //
-            if (vc.hasAttribute(VCFConstants.DEPTH_KEY))
-                depth += vc.getAttributeAsInt(VCFConstants.DEPTH_KEY, 0);
-            if ( vc.hasID() ) rsIDs.add(vc.getID());
             if (mergeInfoWithMaxAC && vc.hasAttribute(VCFConstants.ALLELE_COUNT_KEY)) {
                 String rawAlleleCounts = vc.getAttributeAsString(VCFConstants.ALLELE_COUNT_KEY, null);
                 // lets see if the string contains a "," separator
@@ -752,6 +732,7 @@ public final class GATKVariantContextUtils {
                 }
             }
         }
+        // END OF MONSTROUS FOR LOOP
 
         // if we have more alternate alleles in the merged VC than in one or more of the
         // original VCs, we need to strip out the GL/PLs (because they are no longer accurate), as well as allele-dependent attributes like AC,AF, and AD
@@ -804,20 +785,31 @@ public final class GATKVariantContextUtils {
             }
         }
 
+        // depth: add up all the depths; ID: join distinct IDs
+        final int depth = VCs.stream().filter(vc -> vc.hasAttribute(VCFConstants.DEPTH_KEY))
+                .mapToInt(vc -> vc.getAttributeAsInt(VCFConstants.DEPTH_KEY, 0)).sum();
         if ( depth > 0 )
             attributes.put(VCFConstants.DEPTH_KEY, String.valueOf(depth));
 
+        final Set<String> rsIDs = VCs.stream().filter(VariantContext::hasID).map(VariantContext::getID).collect(Collectors.toSet());
         final String ID = rsIDs.isEmpty() ? VCFConstants.EMPTY_ID_FIELD : Utils.join(",", rsIDs);
 
-        final VariantContextBuilder builder = new VariantContextBuilder().source(name).id(ID);
-        builder.loc(longestVC.getContig(), longestVC.getStart(), longestVC.getEnd());
-        builder.alleles(alleles);
-        builder.genotypes(genotypes);
-        builder.log10PError(log10PError);
+        // Take the QUAL of the first VC with a non-MISSING qual for the combined value
+        final double log10PError = VCs.stream().mapToDouble(VariantContext::getLog10PError)
+                .filter(p -> p != CommonInfo.NO_LOG10_PERROR)
+                .findFirst().orElseGet(() -> CommonInfo.NO_LOG10_PERROR);
+
+        final VariantContext longestVC = VCs.stream().max(Comparator.comparing(vc -> VariantContextUtils.getSize(vc))).get();
+
+        final VariantContextBuilder builder = new VariantContextBuilder().source(name).id(ID)
+                .loc(longestVC.getContig(), longestVC.getStart(), longestVC.getEnd())
+                .alleles(alleles)
+                .genotypes(genotypes)
+                .log10PError(log10PError)
+                .attributes(new TreeMap<>(mergeInfoWithMaxAC ? attributesWithMaxAC : attributes));
         if ( anyVCHadFiltersApplied ) {
             builder.filters(filters.isEmpty() ? filters : new TreeSet<>(filters));
         }
-        builder.attributes(new TreeMap<>(mergeInfoWithMaxAC ? attributesWithMaxAC : attributes));
 
         // Trim the padded bases of all alleles if necessary
         final VariantContext merged = builder.make();
