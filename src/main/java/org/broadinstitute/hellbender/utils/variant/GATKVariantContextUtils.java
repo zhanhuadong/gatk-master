@@ -1040,12 +1040,12 @@ public final class GATKVariantContextUtils {
         final GenotypesContext genotypes = updateGenotypesWithMappedAlleles(inputVC.getGenotypes(), alleleMapper);
 
         final int start = inputVC.getStart() + (fwdTrimEnd + 1);
-        final VariantContextBuilder builder = new VariantContextBuilder(inputVC);
-        builder.start(start);
-        builder.stop(start + alleles.get(0).length() - 1);
-        builder.alleles(alleles);
-        builder.genotypes(genotypes);
-        return builder.make();
+        return new VariantContextBuilder(inputVC)
+                .start(start)
+                .stop(start + alleles.get(0).length() - 1)
+                .alleles(alleles)
+                .genotypes(genotypes)
+                .make();
     }
 
     protected static GenotypesContext updateGenotypesWithMappedAlleles(final GenotypesContext originalGenotypes, final AlleleMapper alleleMapper) {
