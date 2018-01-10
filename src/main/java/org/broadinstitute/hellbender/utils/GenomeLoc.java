@@ -325,35 +325,21 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
 
     @Override
     public int compareTo( final GenomeLoc that ) {
-        int result = 0;
-
         if ( this == that ) {
-            result = 0;
-        }
-        else if(this.isUnmapped()) {
-            result = 1;
+             return 0;
+        } else if(this.isUnmapped()) {
+            return 1;
         } else if(that.isUnmapped()) {
-            result = -1;
+            return -1;
         } else {
             final int cmpContig = compareContigs(that);
-
             if ( cmpContig != 0 ) {
-                result = cmpContig;
+                return cmpContig;
             } else {
-                if ( this.getStart() < that.getStart() ) {
-                    result = -1;
-                } else if ( this.getStart() > that.getStart() ) {
-                    result = 1;
-                }// these have the same start, so check the ends
-                else if ( this.getStop() < that.getStop() ) {
-                    result = -1;
-                } else if ( this.getStop() > that.getStop() ) {
-                    result = 1;
-                }
+                final int cmpStart = Integer.compare(this.getStart(), that.getStart());
+                return cmpStart != 0 ? cmpStart : Integer.compare(this.getStop(), that.getStop());
             }
         }
-
-        return result;
     }
 
     /**
