@@ -563,10 +563,7 @@ public final class GATKVariantContextUtils {
         for ( final Genotype g : vc.getGenotypes() ) {
             final int gPloidy = g.getPloidy() == 0 ? defaultPloidy : g.getPloidy();
             final List<Allele> refAlleles = gPloidy == 2 ? diploidRefAlleles : Collections.nCopies(gPloidy, ref);
-            final GenotypeBuilder gb = new GenotypeBuilder(g.getSampleName(), refAlleles);
-            if ( g.hasDP() ) gb.DP(g.getDP());
-            if ( g.hasGQ() ) gb.GQ(g.getGQ());
-            newGTs.add(gb.make());
+            newGTs.add(new GenotypeBuilder(g.getSampleName(), refAlleles).DP(g.getDP()).GQ(g.getGQ()).make());
         }
 
         return newGTs;
