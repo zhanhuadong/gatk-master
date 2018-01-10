@@ -320,12 +320,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * @return 0 if equal, -1 if that.contig is greater, 1 if this.contig is greater
      */
     public final int compareContigs( final GenomeLoc that ) {
-        if (this.contigIndex == that.contigIndex) {
-            return 0;
-        } else if (this.contigIndex > that.contigIndex) {
-            return 1;
-        }
-        return -1;
+        return Integer.compare(this.contigIndex, that.contigIndex);
     }
 
     @Override
@@ -386,11 +381,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * 25% (50% for gl1 but only 25% for gl2)
      */
     public final double reciprocialOverlapFraction(final GenomeLoc o) {
-        if ( overlapsP(o) ) {
-            return Math.min(overlapPercent(this, o), overlapPercent(o, this));
-        } else {
-            return 0.0;
-        }
+        return overlapsP(o) ? Math.min(overlapPercent(this, o), overlapPercent(o, this)) : 0.0;
     }
 
     private static double overlapPercent(final GenomeLoc gl1, final GenomeLoc gl2) {
