@@ -126,16 +126,11 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * this and that GenomeLoc are contiguous and both mapped
      */
     public GenomeLoc merge( final GenomeLoc that ) throws GATKException {
-        if(this.isUnmapped() || that.isUnmapped()) {
-            if(! this.isUnmapped() || !that.isUnmapped()) {
-                throw new GATKException("Tried to merge a mapped and an unmapped genome loc");
-            }
+        Utils.validateArg(this.isUnmapped() == that.isUnmapped(), "Tried to merge a mapped and an unmapped genome loc");
+        if (this.isUnmapped()) {
             return UNMAPPED;
         }
-
-        if (!(this.contiguousP(that))) {
-            throw new GATKException("The two genome loc's need to be contiguous");
-        }
+        Utils.validateArg(this.contiguousP(that), "The two genome loc's need to be contiguous");
 
         return new GenomeLoc(getContig(), this.contigIndex,
                 Math.min( getStart(), that.getStart() ),
@@ -157,16 +152,12 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     public GenomeLoc union( final GenomeLoc that ) { return merge(that); }
 
     public GenomeLoc intersect( final GenomeLoc that ) throws GATKException {
-        if(this.isUnmapped() || that.isUnmapped()) {
-            if(! this.isUnmapped() || !that.isUnmapped()) {
-                throw new GATKException("Tried to intersect a mapped and an unmapped genome loc");
-            }
+        Utils.validateArg(this.isUnmapped() == that.isUnmapped(), "Tried to merge a mapped and an unmapped genome loc");
+        if (this.isUnmapped()) {
             return UNMAPPED;
         }
 
-        if (!(this.overlapsP(that))) {
-            throw new GATKException("GenomeLoc::intersect(): The two genome loc's need to overlap");
-        }
+        Utils.validateArg(this.overlapsP(that), "The two genome loc's need to overlap");
 
         return new GenomeLoc(getContig(), this.contigIndex,
                 Math.max(getStart(), that.getStart()),
@@ -174,16 +165,11 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     }
 
     public final List<GenomeLoc> subtract( final GenomeLoc that ) {
-        if(this.isUnmapped() || that.isUnmapped()) {
-            if(! this.isUnmapped() || !that.isUnmapped()) {
-                throw new GATKException("Tried to intersect a mapped and an unmapped genome loc");
-            }
+        Utils.validateArg(this.isUnmapped() == that.isUnmapped(), "Tried to merge a mapped and an unmapped genome loc");
+        if (this.isUnmapped()) {
             return Arrays.asList(UNMAPPED);
         }
-
-        if (!(this.overlapsP(that))) {
-            throw new GATKException("GenomeLoc::minus(): The two genome loc's need to overlap");
-        }
+        Utils.validateArg(this.overlapsP(that), "The two genome loc's need to overlap");
 
         if (equals(that)) {
             return Collections.emptyList();
@@ -429,14 +415,8 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      * @return one merged loc
      */
     public static <T extends GenomeLoc> GenomeLoc merge(final T a, final T b) {
-        if ( a.isUnmapped() || b.isUnmapped() ) {
-            throw new GATKException("Tried to merge unmapped genome locs");
-        }
-
-        if ( !(a.contiguousP(b)) ) {
-            throw new GATKException("The two genome locs need to be contiguous");
-        }
-
+        Utils.validateArg(!a.isUnmapped() && !b.isUnmapped(), "Tried to merge unmapped genome locs");
+        Utils.validateArg(a.contiguousP(b), "The two genome locs need to be contiguous");
         return new GenomeLoc(a.getContig(), a.contigIndex, Math.min(a.getStart(), b.getStart()), Math.max(a.getStop(), b.getStop()));
     }
 
@@ -448,12 +428,9 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
      */
     public static <T extends GenomeLoc> GenomeLoc merge(final SortedSet<T> sortedLocs) {
         GenomeLoc result = null;
+        Utils.validateArg(sortedLocs.stream().noneMatch(GenomeLoc::isUnmapped), "Tried to merge unmapped genome locs");
 
         for ( final GenomeLoc loc : sortedLocs ) {
-            if ( loc.isUnmapped() ) {
-                throw new GATKException("Tried to merge unmapped genome locs");
-            }
-
             if ( result == null ) {
                 result = loc;
             } else if ( !result.contiguousP(loc) ) {
