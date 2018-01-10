@@ -202,9 +202,7 @@ public final class GATKVariantContextUtils {
      */
     public static BaseUtils.BaseSubstitutionType getSNPSubstitutionType(final VariantContext context) {
         Utils.nonNull(context);
-        if (!context.isSNP() || !context.isBiallelic()) {
-            throw new IllegalArgumentException("Requested SNP substitution type for bialleic non-SNP " + context);
-        }
+        Utils.validateArg(context.isSNP() && context.isBiallelic(), () -> "Requested SNP substitution type for bialleic non-SNP " + context);
         return BaseUtils.SNPSubstitutionType(context.getReference().getBases()[0], context.getAlternateAllele(0).getBases()[0]);
     }
 
