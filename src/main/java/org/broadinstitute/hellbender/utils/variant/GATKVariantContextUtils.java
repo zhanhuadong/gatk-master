@@ -68,8 +68,10 @@ public final class GATKVariantContextUtils {
     {
         Utils.nonNull(outFile);
 
-        VariantContextWriterBuilder vcWriterBuilder =
-                new VariantContextWriterBuilder().clearOptions().setOutputFile(outFile);
+        VariantContextWriterBuilder vcWriterBuilder = new VariantContextWriterBuilder().clearOptions()
+                .setOutputFile(outFile)
+                .setCreateMD5(createMD5)
+                .setReferenceDictionary(referenceDictionary);
 
         if (VariantContextWriterBuilder.OutputType.UNSPECIFIED == getVariantFileTypeFromExtension(outFile)) {
             // the only way the user has to specify an output type is by file extension, and htsjdk
@@ -79,14 +81,6 @@ public final class GATKVariantContextUtils {
                     "Can't determine output variant file format from output file extension \"%s\". Defaulting to VCF.",
                     FilenameUtils.getExtension(outFile.getPath())));
             vcWriterBuilder = vcWriterBuilder.setOutputFileType(VariantContextWriterBuilder.OutputType.VCF);
-        }
-
-        if (createMD5) {
-            vcWriterBuilder.setCreateMD5();
-        }
-
-        if (null != referenceDictionary) {
-            vcWriterBuilder = vcWriterBuilder.setReferenceDictionary(referenceDictionary);
         }
 
         for (Options opt : options) {
