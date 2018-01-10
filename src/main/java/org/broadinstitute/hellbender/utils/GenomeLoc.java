@@ -150,8 +150,6 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
         return new GenomeLoc[] { new GenomeLoc(getContig(),contigIndex,getStart(),splitPoint-1), new GenomeLoc(getContig(),contigIndex,splitPoint,getStop()) };
     }
 
-    public GenomeLoc union( final GenomeLoc that ) { return merge(that); }
-
     public GenomeLoc intersect( final GenomeLoc that ) throws GATKException {
         Utils.validateArg(this.isUnmapped() == that.isUnmapped(), "Tried to merge a mapped and an unmapped genome loc");
         if (this.isUnmapped()) {
