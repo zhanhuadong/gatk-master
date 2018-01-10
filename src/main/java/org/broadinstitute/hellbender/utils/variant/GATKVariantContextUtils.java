@@ -1440,7 +1440,7 @@ public final class GATKVariantContextUtils {
 
         // We know it's a frameshift if we have a replacement that is not of a
         // length evenly divisible by 3 because that's how many bases are read at once:
-        return ((Math.abs( reference.length() - alternate.length() ) % 3) != 0);
+        return ( reference.length() - alternate.length() ) % 3 != 0;
     }
 
     /**
@@ -1457,9 +1457,7 @@ public final class GATKVariantContextUtils {
         final String refComparable = reference.replaceAll("\\*", "");
         final String altComperable = alternate.replaceAll("\\*", "");
 
-        // We know it's a frameshift if we have a replacement that is not of a
-        // length evenly divisible by 3 because that's how many bases are read at once:
-        return ((Math.abs( refComparable.length() - altComperable.length() ) % 3) != 0);
+        return (refComparable.length() - altComperable.length() ) % 3 != 0;
     }
 
     /**
@@ -1479,9 +1477,7 @@ public final class GATKVariantContextUtils {
         final int refLength = refEnd - startPos + 1;
         final int altLength = altEnd - startPos + 1;
 
-        // We know it's a frameshift if we have a replacement that is not of a
-        // length evenly divisible by 3 because that's how many bases are read at once:
-        return ((Math.abs( refLength - altLength ) % 3) != 0);
+        return ( refLength - altLength ) % 3  != 0;
     }
 
     /**
