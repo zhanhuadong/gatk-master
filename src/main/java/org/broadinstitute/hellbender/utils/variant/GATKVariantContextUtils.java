@@ -29,6 +29,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public final class GATKVariantContextUtils {
 
@@ -145,6 +146,9 @@ public final class GATKVariantContextUtils {
     }
 
     private static boolean hasPLIncompatibleAlleles(final Collection<Allele> alleleSet1, final Collection<Allele> alleleSet2) {
+        if (alleleSet1.size() != alleleSet2.size()) {
+            return true;
+        }
         final Iterator<Allele> it1 = alleleSet1.iterator();
         final Iterator<Allele> it2 = alleleSet2.iterator();
 
@@ -154,12 +158,7 @@ public final class GATKVariantContextUtils {
             if ( ! a1.equals(a2) )
                 return true;
         }
-
-        // by this point, at least one of the iterators is empty.  All of the elements
-        // we've compared are equal up until this point.  But it's possible that the
-        // sets aren't the same size, which is indicated by the test below.  If they
-        // are of the same size, though, the sets are compatible
-        return it1.hasNext() || it2.hasNext();
+        return false;
     }
 
     /**
