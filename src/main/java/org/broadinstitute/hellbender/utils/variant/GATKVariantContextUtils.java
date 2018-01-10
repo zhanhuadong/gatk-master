@@ -647,27 +647,22 @@ public final class GATKVariantContextUtils {
         final List<VariantContext> preFilteredVCs = sortVariantContextsByPriority(unsortedVCs, priorityListOfVCs, genotypeMergeOptions);
         // Make sure all variant contexts are padded with reference base in case of indels if necessary
         List<VariantContext> VCs = preFilteredVCs.stream()
-                .filter(vc -> !filteredAreUncalled || vc.isNotFiltered())
+                .filter(filteredAreUncalled ? VariantContext::isNotFiltered : vc -> true)
                 .collect(Collectors.toList());
 
         if ( VCs.isEmpty() ) // everything is filtered out and we're filteredAreUncalled
             return null;
 
         // establish the baseline info from the first VC
-        final VariantContext first = VCs.get(0);
-        final String name = first.getSource();
+        final String name = VCs.get(0).getSource();
         final Allele refAllele = determineReferenceAllele(VCs);
 
         final LinkedHashSet<Allele> alleles = new LinkedHashSet<>();
         final Set<String> filters = new LinkedHashSet<>();
-        final Map<String, Object> attributes = new LinkedHashMap<>();
-        final Set<String> inconsistentAttributes = new LinkedHashSet<>();
         final Set<String> variantSources = new LinkedHashSet<>(); // contains the set of sources we found in our set of VCs that are variant
 
-        int maxAC = -1;
         final Map<String, Object> attributesWithMaxAC = new LinkedHashMap<>();
         boolean anyVCHadFiltersApplied = false;
-        VariantContext vcWithMaxAC = null;
         GenotypesContext genotypes = GenotypesContext.create();
 
         // counting the number of filtered and variant VCs
@@ -676,6 +671,21 @@ public final class GATKVariantContextUtils {
         boolean remapped = false;
 
         Utils.validateArg(VCs.stream().mapToInt(VariantContext::getStart).distinct().count() <= 1, "BUG: attempting to merge VariantContexts with different start sites");
+
+        // make a map from attribute to list of all values over all vcs
+        final Map<String, List<Object>> attributeLists = VCs.stream().flatMap(vc -> vc.getAttributes().entrySet().stream())
+                .collect(Collectors.groupingBy(entry -> entry.getKey(), Collectors.mapping(entry -> entry.getValue(), Collectors.toList())));
+
+        final Map<String, Object> attributes = new LinkedHashMap<>();
+        for (final Map.Entry<String, List<Object>> entry : attributeLists.entrySet()) {
+            final List<Object> distinctValues = entry.getValue().stream()
+                    .filter(value -> !value.equals(VCFConstants.MISSING_VALUE_v4)).distinct().collect(Collectors.toList());
+            if (distinctValues.size() == 0) {
+                attributes.put(entry.getKey(), VCFConstants.MISSING_VALUE_v4);
+            } else if (distinctValues.size() == 1) {
+                attributes.put(entry.getKey(), distinctValues.get(0));
+            }
+        }
 
         // cycle through and add info from the other VCs, making sure the loc/reference matches
         for ( final VariantContext vc : VCs ) {
@@ -689,50 +699,7 @@ public final class GATKVariantContextUtils {
 
             filters.addAll(vc.getFilters());
             anyVCHadFiltersApplied |= vc.filtersWereApplied();
-
-            // add attributes
-            if (mergeInfoWithMaxAC && vc.hasAttribute(VCFConstants.ALLELE_COUNT_KEY)) {
-                String rawAlleleCounts = vc.getAttributeAsString(VCFConstants.ALLELE_COUNT_KEY, null);
-                // lets see if the string contains a "," separator
-                if (rawAlleleCounts.contains(VCFConstants.INFO_FIELD_ARRAY_SEPARATOR)) {
-                    final List<String> alleleCountArray = Arrays.asList(rawAlleleCounts.substring(1, rawAlleleCounts.length() - 1).split(VCFConstants.INFO_FIELD_ARRAY_SEPARATOR));
-                    for (final String alleleCount : alleleCountArray) {
-                        final int ac = Integer.valueOf(alleleCount.trim());
-                        if (ac > maxAC) {
-                            maxAC = ac;
-                            vcWithMaxAC = vc;
-                        }
-                    }
-                } else {
-                    final int ac = Integer.valueOf(rawAlleleCounts);
-                    if (ac > maxAC) {
-                        maxAC = ac;
-                        vcWithMaxAC = vc;
-                    }
-                }
-            }
-
-            for (final Map.Entry<String, Object> p : vc.getAttributes().entrySet()) {
-                final String key = p.getKey();
-                final Object value = p.getValue();
-                // only output annotations that have the same value in every input VC
-                // if we don't like the key already, don't go anywhere
-                if ( ! inconsistentAttributes.contains(key) ) {
-                    final boolean alreadyFound = attributes.containsKey(key);
-                    final Object boundValue = attributes.get(key);
-                    final boolean boundIsMissingValue = alreadyFound && boundValue.equals(VCFConstants.MISSING_VALUE_v4);
-
-                    if ( alreadyFound && ! boundValue.equals(value) && ! boundIsMissingValue ) {
-                        // we found the value but we're inconsistent, put it in the exclude list
-                        inconsistentAttributes.add(key);
-                        attributes.remove(key);
-                    } else if ( ! alreadyFound || boundIsMissingValue )  { // no value
-                        attributes.put(key, value);
-                    }
-                }
-            }
         }
-        // END OF MONSTROUS FOR LOOP
 
         // if we have more alternate alleles in the merged VC than in one or more of the
         // original VCs, we need to strip out the GL/PLs (because they are no longer accurate), as well as allele-dependent attributes like AC,AF, and AD
@@ -752,9 +719,17 @@ public final class GATKVariantContextUtils {
         }
 
         // take the VC with the maxAC and pull the attributes into a modifiable map
-        if ( mergeInfoWithMaxAC && vcWithMaxAC != null ) {
-            attributesWithMaxAC.putAll(vcWithMaxAC.getAttributes());
-        }
+        final Optional<VariantContext> vcWithMaxAC = !mergeInfoWithMaxAC ? Optional.empty() : VCs.stream()
+                .filter(vc -> vc.hasAttribute(VCFConstants.ALLELE_COUNT_KEY))
+                .max(Comparator.comparing(vc -> {
+                    final String rawAlleleCounts = vc.getAttributeAsString(VCFConstants.ALLELE_COUNT_KEY, null);
+                    if (rawAlleleCounts.contains(VCFConstants.INFO_FIELD_ARRAY_SEPARATOR)) {
+                        final List<String> alleleCountArray = Arrays.asList(rawAlleleCounts.substring(1, rawAlleleCounts.length() - 1).split(VCFConstants.INFO_FIELD_ARRAY_SEPARATOR));
+                        return alleleCountArray.stream().map(String::trim).mapToInt(Integer::valueOf).max().getAsInt();
+                    } else {
+                        return Integer.valueOf(rawAlleleCounts);
+                    }}));
+        vcWithMaxAC.ifPresent(vc -> attributesWithMaxAC.putAll(vc.getAttributes()));
 
         // if at least one record was unfiltered and we want a union, clear all of the filters
         if ( (filteredRecordMergeType == FilteredRecordMergeType.KEEP_IF_ANY_UNFILTERED && nFiltered != VCs.size()) || filteredRecordMergeType == FilteredRecordMergeType.KEEP_UNCONDITIONAL )
