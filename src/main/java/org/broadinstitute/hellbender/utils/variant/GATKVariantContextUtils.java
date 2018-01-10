@@ -107,15 +107,6 @@ public final class GATKVariantContextUtils {
     }
 
     /**
-     * Diploid NO_CALL allele list...
-     *
-     * @deprecated you should use {@link #noCallAlleles(int)} instead. It indicates the presence of a hardcoded diploid assumption which is bad.
-     */
-    @Deprecated
-    public final static List<Allele> NO_CALL_ALLELES = Arrays.asList(Allele.NO_CALL, Allele.NO_CALL);
-
-
-    /**
      * Checks whether a variant-context overlaps with a region.
      *
      * <p>
