@@ -391,7 +391,7 @@ public final class GATKVariantContextUtils {
         // for example, -*,CACA needs to first be decomposed into (CA)2
         final int repeatUnitLength = findRepeatedSubstring(longB);
         final byte[] repeatUnit = Arrays.copyOf(longB, repeatUnitLength);
-        
+
         // look for repetitions forward on the ref bases (i.e. starting at beginning of ref bases)
         int repetitionsInRef = findNumberOfRepetitions(repeatUnit, refBases, true);
         final int refRepetitionCount = findNumberOfRepetitions(repeatUnit, ArrayUtils.addAll(refBases, remainingRefContext), true)-repetitionsInRef;
@@ -411,24 +411,24 @@ public final class GATKVariantContextUtils {
      *                              be represented as one, it will be just the length of the input string)
      */
     public static int findRepeatedSubstring(byte[] bases) {
-
-        int repLength;
-        for (repLength=1; repLength <=bases.length; repLength++) {
-            final byte[] candidateRepeatUnit = Arrays.copyOf(bases,repLength);
-            boolean allBasesMatch = true;
-            for (int start = repLength; start < bases.length; start += repLength ) {
-                // check that remaining of string is exactly equal to repeat unit
-                final byte[] basePiece = Arrays.copyOfRange(bases,start,start+candidateRepeatUnit.length);
-                if (!Arrays.equals(candidateRepeatUnit, basePiece)) {
-                    allBasesMatch = false;
-                    break;
+        for (int repLength=1; repLength <= bases.length/2; repLength++) {
+            if (bases.length % repLength != 0) {
+                continue;
+            }
+            final int numRepeats = bases.length / repLength;
+            for (int i = 1; i < numRepeats; i++) {
+                final int offset = i * repLength;
+                for (int j = 0; j < repLength; j++) {
+                    if (bases[j] != bases[j + offset]) {
+                        break;
+                    }
                 }
             }
-            if (allBasesMatch)
-                return repLength;
+
+            return repLength;
         }
 
-        return repLength;
+        return bases.length;
     }
 
     /**
