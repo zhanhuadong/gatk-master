@@ -89,8 +89,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     public final String toString()  {
         if(isUnmapped()) {
             return "unmapped";
-        }
-        if ( throughEndOfContigP() && atBeginningOfContigP() ) {
+        } else if ( throughEndOfContigP() && atBeginningOfContigP() ) {
             return getContig();
         } else if ( throughEndOfContigP() || getStart() == getStop() ) {
             return String.format("%s:%d", getContig(), getStart());
@@ -99,9 +98,9 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
         }
     }
 
-    private boolean throughEndOfContigP() { return this.stop == Integer.MAX_VALUE; }
+    private boolean throughEndOfContigP() { return stop == Integer.MAX_VALUE; }
 
-    private boolean atBeginningOfContigP() { return this.start == 1; }
+    private boolean atBeginningOfContigP() { return start == 1; }
 
     public final boolean disjointP(final GenomeLoc that) {
         return this.contigIndex != that.contigIndex || this.start > that.stop || that.start > this.stop;
@@ -112,20 +111,14 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     }
 
     public final boolean overlapsP(final GenomeLoc that) {
-        return ! disjointP( that );
+        return ! disjointP(that);
     }
 
     public final boolean contiguousP(final GenomeLoc that) {
         return ! discontinuousP(that);
     }
 
-    /**
-     * Return true if this GenomeLoc represents the UNMAPPED location
-     * @return
-     */
-    public final boolean isUnmapped() {
-        return this == UNMAPPED;
-    }
+    public final boolean isUnmapped() { return this == UNMAPPED; }
 
 
     /**
@@ -264,11 +257,7 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     }
 
     public final int distance( final GenomeLoc that ) {
-        if ( this.onSameContig(that) ) {
-            return Math.abs(this.getStart() - that.getStart());
-        } else {
-            return Integer.MAX_VALUE;
-        }
+        return this.onSameContig(that) ? Math.abs(this.getStart() - that.getStart()) : Integer.MAX_VALUE;
     }
 
     public final boolean isBetween( final GenomeLoc left, final GenomeLoc right ) {
@@ -301,19 +290,13 @@ public class GenomeLoc implements Comparable<GenomeLoc>, Serializable, HasGenome
     public final int minDistance( final GenomeLoc that ) {
         if (!this.onSameContig(that)) {
             return Integer.MAX_VALUE;
-        }
-
-        final int minDistance;
-        if (this.isBefore(that)) {
-            minDistance = distanceFirstStopToSecondStart(this, that);
+        } else if (this.isBefore(that)) {
+            return distanceFirstStopToSecondStart(this, that);
         } else if (that.isBefore(this)) {
-            minDistance = distanceFirstStopToSecondStart(that, this);
-        } else // this and that overlap [and possibly one contains the other]:
-        {
-            minDistance = 0;
+            return distanceFirstStopToSecondStart(that, this);
+        } else { // this and that overlap [and possibly one contains the other]:
+            return 0;
         }
-
-        return minDistance;
     }
 
     private static int distanceFirstStopToSecondStart(final GenomeLoc locFirst, final GenomeLoc locSecond) {
