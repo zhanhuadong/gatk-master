@@ -1195,11 +1195,9 @@ public final class GATKVariantContextUtils {
         final List<Allele> alleles = new LinkedList<>();
         final int length = alleleStrings.get(0).length();
 
-        boolean first = true;
-        for ( final String alleleString : alleleStrings ) {
-            alleles.add(Allele.create(alleleString, first));
-            first = false;
-        }
+        alleles.add(Allele.create(alleleStrings.get(0), true));
+        alleleStrings.subList(1, alleleStrings.size()).forEach(as -> alleles.add(Allele.create(as, false)));
+
         return new VariantContextBuilder(name, contig, start, start+length-1, alleles).make();
     }
 
