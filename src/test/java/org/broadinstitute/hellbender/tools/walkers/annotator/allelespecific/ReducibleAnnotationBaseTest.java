@@ -101,9 +101,8 @@ public abstract class ReducibleAnnotationBaseTest extends GATKBaseTest {
         VariantAnnotatorEngine annotatorEngine = VariantAnnotatorEngine.ofSelectedMinusExcluded(Collections.emptyList(), getAnnotationsToUse(), Collections.emptyList(), null, Collections.emptyList());
         final UnifiedArgumentCollection uac = new UnifiedArgumentCollection();
         uac.genotypeArgs = new GenotypeCalculationArgumentCollection();
-        GeneralPloidyFailOverAFCalculatorProvider calculatorProvider = new GeneralPloidyFailOverAFCalculatorProvider(uac.genotypeArgs);
 
-        GenotypingEngine<?> genotypingEngine = new MinimalGenotypingEngine(uac, new IndexedSampleList(result.getSampleNamesOrderedByName()), calculatorProvider);
+        GenotypingEngine<?> genotypingEngine = new MinimalGenotypingEngine(uac, new IndexedSampleList(result.getSampleNamesOrderedByName()));
         genotypingEngine.setAnnotationEngine(annotatorEngine);
         GenotypeLikelihoodsCalculationModel model = result.getType() == VariantContext.Type.INDEL
                 ? GenotypeLikelihoodsCalculationModel.INDEL

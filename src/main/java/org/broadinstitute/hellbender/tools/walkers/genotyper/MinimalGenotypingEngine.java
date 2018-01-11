@@ -19,9 +19,8 @@ public final class MinimalGenotypingEngine extends GenotypingEngine<UnifiedArgum
      * @param configuration the UG configuration.
      * @param samples list of samples
      */
-    public MinimalGenotypingEngine(final UnifiedArgumentCollection configuration, final SampleList samples,
-                                   final AFCalculatorProvider afCalculatorProvider) {
-        this(configuration, samples, afCalculatorProvider, false);
+    public MinimalGenotypingEngine(final UnifiedArgumentCollection configuration, final SampleList samples) {
+        this(configuration, samples,  false);
     }
 
     /**
@@ -32,8 +31,8 @@ public final class MinimalGenotypingEngine extends GenotypingEngine<UnifiedArgum
      * @param doAlleleSpecificCalcs Whether to calculate genotyping annotations needed for allele specific annotations
      */
     public MinimalGenotypingEngine(final UnifiedArgumentCollection configuration, final SampleList samples,
-                                    final AFCalculatorProvider afCalculatorProvider, boolean doAlleleSpecificCalcs ) {
-        super(configuration, samples, afCalculatorProvider, doAlleleSpecificCalcs);
+                                     boolean doAlleleSpecificCalcs ) {
+        super(configuration, samples, doAlleleSpecificCalcs);
 
         if ( configuration.genotypingOutputMode == GenotypingOutputMode.GENOTYPE_GIVEN_ALLELES ) {
             throw new UserException("GENOTYPE_GIVEN_ALLELES mode not supported in the MinimalGenotypingEngine");
