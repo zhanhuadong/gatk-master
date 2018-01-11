@@ -25,20 +25,18 @@ public final class AFCalculatorTestBuilder {
 
     final int nSamples;
     final int numAltAlleles;
-    final AFCalculatorImplementation modelType;
     final PriorType priorType;
 
     public AFCalculatorTestBuilder(final int nSamples, final int numAltAlleles,
-                                   final AFCalculatorImplementation modelType, final PriorType priorType) {
+                                   final PriorType priorType) {
         this.nSamples = nSamples;
         this.numAltAlleles = numAltAlleles;
-        this.modelType = modelType;
         this.priorType = priorType;
     }
 
     @Override
     public String toString() {
-        return String.format("AFCalcTestBuilder nSamples=%d nAlts=%d model=%s prior=%s", nSamples, numAltAlleles, modelType, priorType);
+        return String.format("AFCalcTestBuilder nSamples=%d nAlts=%d prior=%s", nSamples, numAltAlleles,  priorType);
     }
 
     public enum PriorType {
@@ -55,23 +53,19 @@ public final class AFCalculatorTestBuilder {
     }
 
     public AFCalculator makeModel() {
-        return createCalculator(modelType, nSamples, getNumAltAlleles(), HomoSapiensConstants.DEFAULT_PLOIDY);
+        return createCalculator(nSamples, getNumAltAlleles(), HomoSapiensConstants.DEFAULT_PLOIDY);
     }
 
     /**
      * Create a new AFCalc
      *
-     * @param implementation the calculation to use
      * @param nSamples the number of samples we'll be using
      * @param maxAltAlleles the max. alt alleles to consider for SNPs
      * @param ploidy the sample ploidy.  Must be consistent with the implementation
      *
      * @return an initialized AFCalc
      */
-    private static AFCalculator createCalculator(final AFCalculatorImplementation implementation, final int nSamples, final int maxAltAlleles, final int ploidy) {
-        if ( implementation == null ) {
-            throw new IllegalArgumentException("Calculation cannot be null");
-        }
+    private static AFCalculator createCalculator(final int nSamples, final int maxAltAlleles, final int ploidy) {
         if ( nSamples < 0 ) {
             throw new IllegalArgumentException("nSamples must be greater than zero " + nSamples);
         }
@@ -82,11 +76,7 @@ public final class AFCalculatorTestBuilder {
             throw new IllegalArgumentException("sample ploidy must be greater than zero " + ploidy);
         }
 
-        if ( ! implementation.usableForParams(ploidy, maxAltAlleles) ) {
-            throw new IllegalArgumentException("AFCalc " + implementation + " does not support requested ploidy " + ploidy);
-        }
-
-        return implementation.newInstance();
+        return null;
     }
 
     public double[] makePriors() {
