@@ -26,7 +26,6 @@ public final class GenotypeCalculationArgumentCollection implements Serializable
     public GenotypeCalculationArgumentCollection( final GenotypeCalculationArgumentCollection other ) {
         Utils.nonNull(other);
 
-        this.USE_NEW_AF_CALCULATOR = other.USE_NEW_AF_CALCULATOR;
         this.ANNOTATE_NUMBER_OF_ALLELES_DISCOVERED = other.ANNOTATE_NUMBER_OF_ALLELES_DISCOVERED;
         this.snpHeterozygosity = other.snpHeterozygosity;
         this.indelHeterozygosity = other.indelHeterozygosity;
@@ -35,12 +34,6 @@ public final class GenotypeCalculationArgumentCollection implements Serializable
         this.inputPrior = new ArrayList<>(other.inputPrior);
         this.samplePloidy = other.samplePloidy;
     }
-
-    /**
-     * Use the new allele frequency / QUAL score model
-     */
-    @Argument(fullName = "use-new-qual-calculator", shortName = "new-qual", doc = "If provided, we will use the new AF model instead of the so-called exact model", optional = true)
-    public boolean USE_NEW_AF_CALCULATOR = false;
 
     /**
      * Depending on the value of the --max_alternate_alleles argument, we may genotype only a fraction of the alleles being sent on for genotyping.
