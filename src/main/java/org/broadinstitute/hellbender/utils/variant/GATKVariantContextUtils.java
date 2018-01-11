@@ -416,16 +416,16 @@ public final class GATKVariantContextUtils {
                 continue;
             }
             final int numRepeats = bases.length / repLength;
-            for (int i = 1; i < numRepeats; i++) {
+            boolean isRepeat = true;
+            for (int i = 1; i < numRepeats && isRepeat; i++) {
                 final int offset = i * repLength;
-                for (int j = 0; j < repLength; j++) {
-                    if (bases[j] != bases[j + offset]) {
-                        break;
-                    }
+                for (int j = 0; j < repLength && isRepeat; j++) {
+                    isRepeat &= bases[j] == bases[j + offset];
                 }
             }
-
-            return repLength;
+            if (isRepeat) {
+                return repLength;
+            }
         }
 
         return bases.length;
@@ -766,7 +766,7 @@ public final class GATKVariantContextUtils {
         if ( depth > 0 )
             attributes.put(VCFConstants.DEPTH_KEY, String.valueOf(depth));
 
-        final Set<String> rsIDs = VCs.stream().filter(VariantContext::hasID).map(VariantContext::getID).collect(Collectors.toSet());
+        final Set<String> rsIDs = VCs.stream().filter(VariantContext::hasID).map(VariantContext::getID).collect(Collectors.toCollection(LinkedHashSet::new));
         final String ID = rsIDs.isEmpty() ? VCFConstants.EMPTY_ID_FIELD : Utils.join(",", rsIDs);
 
         // Take the QUAL of the first VC with a non-MISSING qual for the combined value
