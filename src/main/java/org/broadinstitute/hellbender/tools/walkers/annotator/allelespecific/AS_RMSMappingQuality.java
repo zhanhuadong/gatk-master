@@ -4,10 +4,8 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypesContext;
 import htsjdk.variant.variantcontext.VariantContext;
-import htsjdk.variant.vcf.VCFInfoHeaderLine;
 import org.apache.log4j.Logger;
 import org.broadinstitute.barclay.help.DocumentedFeature;
-import org.broadinstitute.hellbender.engine.AlignmentContext;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.tools.walkers.annotator.InfoFieldAnnotation;
 import org.broadinstitute.hellbender.utils.QualityUtils;
@@ -15,7 +13,6 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.genotyper.ReadLikelihoods;
 import org.broadinstitute.hellbender.utils.help.HelpConstants;
 import org.broadinstitute.hellbender.utils.variant.GATKVCFConstants;
-import org.broadinstitute.hellbender.utils.variant.GATKVCFHeaderLines;
 
 import java.util.*;
 
@@ -118,9 +115,9 @@ public final class AS_RMSMappingQuality extends InfoFieldAnnotation implements A
     protected void parseRawDataString(final ReducibleAnnotationData<Number> myData) {
         final String rawDataString = myData.getRawData();
         //get per-allele data by splitting on allele delimiter
-        final String[] rawDataPerAllele = rawDataString.split(SPLIT_DELIM);
-        for (int i=0; i<rawDataPerAllele.length; i++) {
-            final String alleleData = rawDataPerAllele[i];
+        final List<String> rawDataPerAllele = Utils.split(rawDataString, SPLIT_DELIM);
+        for (int i=0; i<rawDataPerAllele.size(); i++) {
+            final String alleleData = rawDataPerAllele.get(i);
             myData.putAttribute(myData.getAlleles().get(i), Double.parseDouble(alleleData));
         }
     }
