@@ -30,7 +30,7 @@ import java.util.stream.Stream;
  */
 public abstract class GenotypingEngine<Config extends StandardCallerArgumentCollection> {
 
-    protected final AFCalculator newAFCalculator;
+    protected final AlleleFrequencyCalculator newAFCalculator;
 
     protected final Config configuration;
 
@@ -246,7 +246,7 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         }
 
 
-        final AFCalculator afCalculator = newAFCalculator;
+        final AlleleFrequencyCalculator afCalculator = newAFCalculator;
         final AFCalculationResult AFresult = afCalculator.getLog10PNonRef(reducedVC, defaultPloidy, maxAltAlleles, getAlleleFrequencyPriors(vc,defaultPloidy,model));
         final OutputAlleleSubset outputAlternativeAlleles = calculateOutputAlleleSubset(AFresult, vc);
 
