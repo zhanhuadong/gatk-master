@@ -18,7 +18,7 @@ import java.util.*;
  */
 public abstract class AS_StrandBiasTest extends StrandBiasTest implements ReducibleAnnotation {
     private final static Logger logger = Logger.getLogger(AS_StrandBiasTest.class);
-    public static final String SPLIT_DELIM = "\\|"; //String.split takes a regex, so we need to escape the pipe
+    public static final String SPLIT_DELIM = "|";
     public static final String PRINT_DELIM = "|";
     public static final String REDUCED_DELIM = ",";
     public static final int MIN_COUNT = 2;

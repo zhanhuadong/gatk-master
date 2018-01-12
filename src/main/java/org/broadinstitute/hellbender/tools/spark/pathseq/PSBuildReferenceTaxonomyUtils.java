@@ -34,19 +34,19 @@ public final class PSBuildReferenceTaxonomyUtils {
         for (final SAMSequenceRecord record : dictionaryList) {
             final String recordName = record.getSequenceName();
             final long recordLength = record.getSequenceLength();
-            final List<String> tokens = Utils.split(recordName, VERTICAL_BAR_DELIMITER_REGEX);
+            final String[] tokens = recordName.split(VERTICAL_BAR_DELIMITER_REGEX);
             String recordAccession = null;
             int recordTaxId = PSTree.NULL_NODE;
-            for (int i = 0; i < tokens.size() - 1 && recordTaxId == PSTree.NULL_NODE; i++) {
-                if (tokens.get(i).equals("ref")) {
-                    recordAccession = tokens.get(i + 1);
-                } else if (tokens.get(i).equals("taxid")) {
-                    recordTaxId = parseTaxonId(tokens.get(i + 1));
+            for (int i = 0; i < tokens.length - 1 && recordTaxId == PSTree.NULL_NODE; i++) {
+                if (tokens[i].equals("ref")) {
+                    recordAccession = tokens[i + 1];
+                } else if (tokens[i].equals("taxid")) {
+                    recordTaxId = parseTaxonId(tokens[i + 1]);
                 }
             }
             if (recordTaxId == PSTree.NULL_NODE) {
                 if (recordAccession == null) {
-                    final List<String> tokens2 = Utils.split(tokens.get(0), " "); //Default accession to first word in the name
+                    final List<String> tokens2 = Utils.split(tokens[0], " "); //Default accession to first word in the name
                     recordAccession = tokens2.get(0);
                 }
                 accessionToNameAndLength.put(recordAccession, new Tuple2<>(recordName, recordLength));
@@ -154,14 +154,14 @@ public final class PSBuildReferenceTaxonomyUtils {
             String line;
             while ((line = reader.readLine()) != null) {
                 //Split into columns delimited by <TAB>|<TAB>
-                final List<String> tokens = Utils.split(line, VERTICAL_BAR_DELIMITER_REGEX);
-                if (tokens.size() < 4) {
-                    throw new UserException.BadInput("Expected at least 4 columns in tax dump names file but found " + tokens.size());
+                final String[] tokens = line.split(VERTICAL_BAR_DELIMITER_REGEX);
+                if (tokens.length < 4) {
+                    throw new UserException.BadInput("Expected at least 4 columns in tax dump names file but found " + tokens.length);
                 }
-                final String nameType = tokens.get(3);
+                final String nameType = tokens[3];
                 if (nameType.equals("scientific name")) {
-                    final int taxId = parseTaxonId(tokens.get(0));
-                    final String name = tokens.get(1);
+                    final int taxId = parseTaxonId(tokens[0]);
+                    final String name = tokens[1];
                     if (taxIdToProperties.containsKey(taxId)) {
                         taxIdToProperties.get(taxId).setName(name);
                     } else {
@@ -184,13 +184,13 @@ public final class PSBuildReferenceTaxonomyUtils {
             final Collection<Integer> taxIdsNotFound = new ArrayList<>();
             String line;
             while ((line = reader.readLine()) != null) {
-                final List<String> tokens = Utils.split(line, VERTICAL_BAR_DELIMITER_REGEX);
-                if (tokens.size() < 3) {
-                    throw new UserException.BadInput("Expected at least 3 columns in tax dump nodes file but found " + tokens.size());
+                final String[] tokens = line.split(VERTICAL_BAR_DELIMITER_REGEX);
+                if (tokens.length < 3) {
+                    throw new UserException.BadInput("Expected at least 3 columns in tax dump nodes file but found " + tokens.length);
                 }
-                final int taxId = parseTaxonId(tokens.get(0));
-                final int parent = parseTaxonId(tokens.get(1));
-                final String rank = tokens.get(2);
+                final int taxId = parseTaxonId(tokens[0]);
+                final int parent = parseTaxonId(tokens[1]);
+                final String rank = tokens[2];
                 final PSPathogenReferenceTaxonProperties taxonProperties;
                 if (taxIdToProperties.containsKey(taxId)) {
                     taxonProperties = taxIdToProperties.get(taxId);

@@ -279,7 +279,8 @@ public final class Nd4jIOUtils {
         Utils.nonNull(stringRepr, "The column name must be non-null");
         Utils.validateArg(stringRepr.length() > 2 && stringRepr.startsWith("[") && stringRepr.endsWith("]"),
                 "The provided string is not a valid shape string");
-        return Arrays.stream(stringRepr.substring(1, stringRepr.length() - 1).split("_"))
+        return Utils.split(stringRepr.substring(1, stringRepr.length() - 1),"_")
+                .stream()
                 .mapToInt(Integer::valueOf).toArray();
     }
 

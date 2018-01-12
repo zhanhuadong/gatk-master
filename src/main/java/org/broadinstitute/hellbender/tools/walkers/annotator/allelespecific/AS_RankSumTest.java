@@ -19,7 +19,7 @@ import java.util.*;
  */
 public abstract class AS_RankSumTest extends RankSumTest implements ReducibleAnnotation {
     private static final Logger logger = Logger.getLogger(AS_RankSumTest.class);
-    public static final String SPLIT_DELIM = "\\|"; //String.split takes a regex, so we need to escape the pipe
+    public static final String SPLIT_DELIM = "|";
     public static final String PRINT_DELIM = "|";
     public static final String RAW_DELIM = ",";
     public static final String REDUCED_DELIM = ",";

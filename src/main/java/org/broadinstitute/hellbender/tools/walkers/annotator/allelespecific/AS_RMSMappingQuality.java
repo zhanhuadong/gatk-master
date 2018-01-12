@@ -47,7 +47,7 @@ public final class AS_RMSMappingQuality extends InfoFieldAnnotation implements A
     private final String printFormat = "%.2f";
 
     private static final Logger logger = Logger.getLogger(AS_RMSMappingQuality.class);
-    public static final String SPLIT_DELIM = "\\|"; //String.split takes a regex, so we need to escape the pipe
+    public static final String SPLIT_DELIM = "|";
     public static final String PRINT_DELIM = "|";
 
 
