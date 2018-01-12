@@ -42,11 +42,11 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
 
     protected final SampleList samples;
 
-    private final AFPriorProvider log10AlleleFrequencyPriorsSNPs;
-
-    private final AFPriorProvider log10AlleleFrequencyPriorsIndels;
-
     private final List<SimpleInterval> upstreamDeletionsLoc = new LinkedList<>();
+
+    // log 10 heterozygosities
+    private final double log10OfThetaSnp;
+    private final double log10OfThetaIndel;
 
     private final boolean doAlleleSpecificCalcs;
 
@@ -68,45 +68,13 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
         this.doAlleleSpecificCalcs = doAlleleSpecificCalcs;
         logger = LogManager.getLogger(getClass());
         numberOfGenomes = this.samples.numberOfSamples() * configuration.genotypeArgs.samplePloidy;
-        log10AlleleFrequencyPriorsSNPs = composeAlleleFrequencyPriorProvider(numberOfGenomes,
-                configuration.genotypeArgs.snpHeterozygosity, configuration.genotypeArgs.inputPrior);
-        log10AlleleFrequencyPriorsIndels = composeAlleleFrequencyPriorProvider(numberOfGenomes,
-                configuration.genotypeArgs.indelHeterozygosity, configuration.genotypeArgs.inputPrior);
+        log10OfThetaSnp = Math.log10(configuration.genotypeArgs.snpHeterozygosity);
+        log10OfThetaIndel = Math.log10(configuration.genotypeArgs.indelHeterozygosity);
 
         final double refPseudocount = configuration.genotypeArgs.snpHeterozygosity / Math.pow(configuration.genotypeArgs.heterozygosityStandardDeviation,2);
         final double snpPseudocount = configuration.genotypeArgs.snpHeterozygosity * refPseudocount;
         final double indelPseudocount = configuration.genotypeArgs.indelHeterozygosity * refPseudocount;
         alleleFrequencyCalculator = new AlleleFrequencyCalculator(refPseudocount, snpPseudocount, indelPseudocount, configuration.genotypeArgs.samplePloidy);
-    }
-
-    /**
-     * Function that fills vector with allele frequency priors. By default, infinite-sites, neutral variation prior is used,
-     * where Pr(AC=i) = theta/i where theta is heterozygosity
-     * @param N                                Number of chromosomes
-     * @param heterozygosity                   default heterozygosity to use, if inputPriors is empty
-     * @param inputPriors                      Input priors to use (in which case heterozygosity is ignored)
-     *
-     * @throws IllegalArgumentException if {@code inputPriors} has size != {@code N} or any entry in {@code inputPriors} is not in the (0,1) range.
-     *
-     * @return never {@code null}.
-     */
-    public static AFPriorProvider composeAlleleFrequencyPriorProvider(final int N, final double heterozygosity, final List<Double> inputPriors) {
-
-        if (!inputPriors.isEmpty()) {
-            // user-specified priors
-            if (inputPriors.size() != N) {
-                throw new CommandLineException.BadArgumentValue("inputPrior", "Invalid length of inputPrior vector: vector length must be equal to # samples +1 ");
-            }
-            for (final Double prior : inputPriors) {
-                if (prior <= 0 || prior >= 1) {
-                    throw new CommandLineException.BadArgumentValue("inputPrior", "inputPrior vector values must be greater than 0 and less than 1");
-                }
-            }
-            return new CustomAFPriorProvider(inputPriors);
-        }
-        else {
-            return new HeterozygosityAFPriorProvider(heterozygosity);
-        }
     }
 
     /**
@@ -521,14 +489,13 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
      * @return never {@code null}, an array with exactly <code>total-ploidy(vc) + 1</code> positions.
      */
     protected final double getLog10OfTheta(final VariantContext vc, final int defaultPloidy, final GenotypeLikelihoodsCalculationModel model ) {
-        final int totalPloidy = GATKVariantContextUtils.totalPloidy(vc, defaultPloidy);
         switch (model) {
             case SNP:
             case GENERALPLOIDYSNP:
-                return log10AlleleFrequencyPriorsSNPs.forTotalPloidy(totalPloidy)[1];
+                return log10OfThetaSnp;
             case INDEL:
             case GENERALPLOIDYINDEL:
-                return log10AlleleFrequencyPriorsIndels.forTotalPloidy(totalPloidy)[1];
+                return log10OfThetaIndel;
             default:
                 throw new IllegalArgumentException("Unexpected GenotypeCalculationModel " + model);
         }
