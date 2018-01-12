@@ -17,12 +17,8 @@ import java.util.*;
  * that users of this code can rely on the values coming out of these functions.
  */
 public final class AFCalculationResult {
-    private static final int AF0 = 0;
-    private static final int AF1p = 1;
-    private static final int LOG_10_ARRAY_SIZES = 2;
-
-    private final double[] log10PosteriorsOfAC;
-
+    private final double log10PosteriorOfNoVariant;
+    private final double log10PosteriorOfVariant;
     private final Map<Allele, Double> log10pRefByAllele;
 
     /**
@@ -40,36 +36,21 @@ public final class AFCalculationResult {
      */
     public AFCalculationResult(final int[] alleleCountsOfMLE,
                                final List<Allele> allelesUsedInGenotyping,
-                               final double[] log10PosteriorsOfAC,
+                               final double log10PosteriorOfNoVariant, final double log10PosteriorOfVariant,
                                final Map<Allele, Double> log10pRefByAllele) {
         Utils.nonNull(alleleCountsOfMLE, "alleleCountsOfMLE cannot be null");
-        Utils.nonNull(log10PosteriorsOfAC, "log10PosteriorsOfAC cannot be null");
-        Utils.nonNull(log10PosteriorsOfAC, "log10PosteriorsOfAC cannot be null");
         Utils.nonNull(log10pRefByAllele, "log10pRefByAllele cannot be null");
         Utils.nonNull(allelesUsedInGenotyping, "allelesUsedInGenotyping cannot be null");
-        if ( allelesUsedInGenotyping.isEmpty() ) {
-            throw new IllegalArgumentException("allelesUsedInGenotyping must be non-null list of at least 1 value " + allelesUsedInGenotyping);
-        }
-        if ( alleleCountsOfMLE.length != allelesUsedInGenotyping.size() - 1) {
-            throw new IllegalArgumentException("alleleCountsOfMLE.length " + alleleCountsOfMLE.length + " != allelesUsedInGenotyping.size() " + allelesUsedInGenotyping.size());
-        }
-        if ( log10PosteriorsOfAC.length != 2 ) {
-            throw new IllegalArgumentException("log10PosteriorsOfAC must have length equal 2");
-        }
-        if ( log10pRefByAllele.size() != allelesUsedInGenotyping.size() - 1 ) {
-            throw new IllegalArgumentException("log10pRefByAllele has the wrong number of elements: log10pRefByAllele " + log10pRefByAllele + " but allelesUsedInGenotyping " + allelesUsedInGenotyping);
-        }
-        if ( ! allelesUsedInGenotyping.containsAll(log10pRefByAllele.keySet()) ) {
-            throw new IllegalArgumentException("log10pRefByAllele doesn't contain all of the alleles used in genotyping: log10pRefByAllele " + log10pRefByAllele + " but allelesUsedInGenotyping " + allelesUsedInGenotyping);
-        }if ( ! MathUtils.goodLog10ProbVector(log10PosteriorsOfAC, LOG_10_ARRAY_SIZES, false) ) {
-            throw new IllegalArgumentException("log10PosteriorsOfAC are bad " + Utils.join(",", log10PosteriorsOfAC));
-        }
+        Utils.nonEmpty(allelesUsedInGenotyping, "allelesUsedInGenotyping must be non-null list of at least 1 value.");
+        Utils.validateArg(alleleCountsOfMLE.length == allelesUsedInGenotyping.size() - 1, () -> "alleleCountsOfMLE.length " + alleleCountsOfMLE.length + " != allelesUsedInGenotyping.size() " + allelesUsedInGenotyping.size());
+        Utils.validateArg(log10pRefByAllele.size() == allelesUsedInGenotyping.size() - 1, () -> "log10pRefByAllele has the wrong number of elements: log10pRefByAllele " + log10pRefByAllele + " but allelesUsedInGenotyping " + allelesUsedInGenotyping);
+        Utils.validateArg(allelesUsedInGenotyping.containsAll(log10pRefByAllele.keySet()), () -> "log10pRefByAllele doesn't contain all of the alleles used in genotyping: log10pRefByAllele " + log10pRefByAllele + " but allelesUsedInGenotyping " + allelesUsedInGenotyping);
 
         //make defensive copies of all arguments
         this.alleleCountsOfMLE = alleleCountsOfMLE.clone();
         this.allelesUsedInGenotyping = Collections.unmodifiableList(new ArrayList<>(allelesUsedInGenotyping));
-
-        this.log10PosteriorsOfAC = log10PosteriorsOfAC;
+        this.log10PosteriorOfNoVariant = log10PosteriorOfNoVariant;
+        this.log10PosteriorOfVariant = log10PosteriorOfVariant;
         this.log10pRefByAllele = Collections.unmodifiableMap(new LinkedHashMap<>(log10pRefByAllele));
     }
 
@@ -116,16 +97,12 @@ public final class AFCalculationResult {
     /**
      * Get the log10 normalized -- across all ACs -- posterior probability of AC == 0 for all alleles
      */
-    public double getLog10PosteriorOfAFEq0() {
-        return log10PosteriorsOfAC[AF0];
-    }
+    public double getLog10PosteriorOfAFEq0() { return log10PosteriorOfNoVariant; }
 
     /**
      * Get the log10 normalized -- across all ACs -- posterior probability of AC > 0 for any alleles
      */
-    public double getLog10PosteriorOfAFGT0() {
-        return log10PosteriorsOfAC[AF1p];
-    }
+    public double getLog10PosteriorOfAFGT0() { return log10PosteriorOfVariant; }
 
     @Override
     public String toString() {

@@ -122,9 +122,7 @@ public final class AlleleFrequencyCalculator {
         final Map<Allele, Double> log10PRefByAllele = IntStream.range(1, numAlleles).boxed()
                 .collect(Collectors.toMap(alleles::get, a -> log10POfZeroCountsByAllele[a]));
 
-        final double[] log10PosteriorOfNoVariantYesVariant = {log10PNoVariant, MathUtils.log10OneMinusPow10(log10PNoVariant)};
-
-        return new AFCalculationResult(integerAltAlleleCounts, alleles, log10PosteriorOfNoVariantYesVariant, log10PRefByAllele);
+        return new AFCalculationResult(integerAltAlleleCounts, alleles, log10PNoVariant, MathUtils.log10OneMinusPow10(log10PNoVariant), log10PRefByAllele);
     }
 
     // effectiveAlleleCounts[allele a] = SUM_{genotypes g} (posterior_probability(g) * num_copies of a in g), which we denote as SUM [n_g p_g]

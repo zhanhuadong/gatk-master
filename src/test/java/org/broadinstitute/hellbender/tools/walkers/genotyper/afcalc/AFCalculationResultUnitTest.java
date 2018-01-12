@@ -93,7 +93,7 @@ public final class AFCalculationResultUnitTest extends GATKBaseTest {
         return new AFCalculationResult(
                 new int[]{0},
                 alleles,
-                MathUtils.normalizeLog10(new double[]{1 - pNonRef, pNonRef}),
+                Math.log10(1 - pNonRef), Math.log10(pNonRef),
                 Collections.singletonMap(C, Math.log10(1 - pNonRef)));
     }
 
