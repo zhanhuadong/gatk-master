@@ -83,49 +83,6 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
      * Function that fills vector with allele frequency priors. By default, infinite-sites, neutral variation prior is used,
      * where Pr(AC=i) = theta/i where theta is heterozygosity
      * @param N                                Number of chromosomes
-     * @param priors                           (output) array to be filled with priors
-     * @param heterozygosity                   default heterozygosity to use, if inputPriors is empty
-     * @param inputPriors                      Input priors to use (in which case heterozygosity is ignored)
-     */
-    public static void computeAlleleFrequencyPriors(final int N, final double[] priors, final double heterozygosity, final List<Double> inputPriors) {
-        double sum = 0.0;
-
-        if (!inputPriors.isEmpty()) {
-            // user-specified priors
-            if (inputPriors.size() != N) {
-                throw new CommandLineException.BadArgumentValue("inputPrior", "Invalid length of inputPrior vector: vector length must be equal to # samples +1 ");
-            }
-
-            int idx = 1;
-            for (final double prior: inputPriors) {
-                if (prior < 0.0) {
-                    throw new CommandLineException.BadArgumentValue("Bad argument: negative values not allowed", "inputPrior");
-                }
-                priors[idx++] = Math.log10(prior);
-                sum += prior;
-            }
-        }
-        else {
-            // for each i
-            for (int i = 1; i <= N; i++) {
-                final double value = heterozygosity / (double)i;
-                priors[i] = Math.log10(value);
-                sum += value;
-            }
-        }
-
-        // protection against the case of heterozygosity too high or an excessive number of samples (which break population genetics assumptions)
-        if (sum > 1.0) {
-            throw new CommandLineException.BadArgumentValue("heterozygosity","The heterozygosity value is set too high relative to the number of samples to be processed, or invalid values specified if input priors were provided - try reducing heterozygosity value or correct input priors.");
-        }
-        // null frequency for AF=0 is (1 - sum(all other frequencies))
-        priors[0] = Math.log10(1.0 - sum);
-    }
-
-    /**
-     * Function that fills vector with allele frequency priors. By default, infinite-sites, neutral variation prior is used,
-     * where Pr(AC=i) = theta/i where theta is heterozygosity
-     * @param N                                Number of chromosomes
      * @param heterozygosity                   default heterozygosity to use, if inputPriors is empty
      * @param inputPriors                      Input priors to use (in which case heterozygosity is ignored)
      *
@@ -269,9 +226,8 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
                 && noAllelesOrFirstAlleleIsNotNonRef(outputAlternativeAlleles.alleles)) {
             // technically, at this point our confidence in a reference call isn't accurately estimated
             //  because it didn't take into account samples with no data, so let's get a better estimate
-            final double[] AFpriors = getAlleleFrequencyPriors(vc, defaultPloidy, model);
-            final int INDEX_FOR_AC_EQUALS_1 = 1;
-            return limitedContext ? null : estimateReferenceConfidence(vc, stratifiedContexts, AFpriors[INDEX_FOR_AC_EQUALS_1], true, probOfAtLeastOneAltAllele);
+            final double log10OfTheta = getLog10OfTheta(vc, defaultPloidy, model);
+            return limitedContext ? null : estimateReferenceConfidence(vc, stratifiedContexts, log10OfTheta, true, probOfAtLeastOneAltAllele);
         }
 
         // start constructing the resulting VC
@@ -564,15 +520,15 @@ public abstract class GenotypingEngine<Config extends StandardCallerArgumentColl
      * @throws java.lang.NullPointerException if either {@code vc} or {@code model} is {@code null}
      * @return never {@code null}, an array with exactly <code>total-ploidy(vc) + 1</code> positions.
      */
-    protected final double[] getAlleleFrequencyPriors( final VariantContext vc, final int defaultPloidy, final GenotypeLikelihoodsCalculationModel model ) {
+    protected final double getLog10OfTheta(final VariantContext vc, final int defaultPloidy, final GenotypeLikelihoodsCalculationModel model ) {
         final int totalPloidy = GATKVariantContextUtils.totalPloidy(vc, defaultPloidy);
         switch (model) {
             case SNP:
             case GENERALPLOIDYSNP:
-                return log10AlleleFrequencyPriorsSNPs.forTotalPloidy(totalPloidy);
+                return log10AlleleFrequencyPriorsSNPs.forTotalPloidy(totalPloidy)[1];
             case INDEL:
             case GENERALPLOIDYINDEL:
-                return log10AlleleFrequencyPriorsIndels.forTotalPloidy(totalPloidy);
+                return log10AlleleFrequencyPriorsIndels.forTotalPloidy(totalPloidy)[1];
             default:
                 throw new IllegalArgumentException("Unexpected GenotypeCalculationModel " + model);
         }
