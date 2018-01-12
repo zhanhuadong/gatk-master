@@ -76,12 +76,6 @@ public final class AFCalculationResultUnitTest extends GATKBaseTest {
         Assert.assertEquals(result.getLog10PosteriorOfAFEq0(), data.expectedPosteriors[0], 1e-3, "AF = 0 not expected");
         Assert.assertEquals(result.getLog10PosteriorOfAFGT0(), data.expectedPosteriors[1], 1e-3, "AF > 0 not expected");
 
-        Assert.assertEquals(result.getLog10PriorOfAFEq0(), log10Even[0], 1e-3, "prior for AF > 0 not expected");
-        Assert.assertEquals(result.getLog10PriorOfAFGT0(), log10Even[1], 1e-3, "prior for AF > 0 not expected");
-
-        Assert.assertEquals(result.getLog10LikelihoodOfAFEq0(), data.Ls[0], 1e-3, "likelihood for AF > 0 not expected");
-        Assert.assertEquals(result.getLog10LikelihoodOfAFGT0(), data.Ls[1], 1e-3, "likelihood for AF > 0 not expected");
-
         Assert.assertEquals(result.getAllelesUsedInGenotyping(), alleles, "alleles are different");
 
         Assert.assertNotNull(result.toString());//just making sure it does not blow up, ignoring contents

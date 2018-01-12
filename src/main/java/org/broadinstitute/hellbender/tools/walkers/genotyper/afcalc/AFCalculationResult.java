@@ -21,8 +21,6 @@ public final class AFCalculationResult {
     private static final int AF1p = 1;
     private static final int LOG_10_ARRAY_SIZES = 2;
 
-    private final double[] log10LikelihoodsOfAC;
-    private final double[] log10PriorsOfAC;
     private final double[] log10PosteriorsOfAC;
 
     private final Map<Allele, Double> log10pRefByAllele;
@@ -79,21 +77,8 @@ public final class AFCalculationResult {
         this.alleleCountsOfMLE = alleleCountsOfMLE.clone();
         this.allelesUsedInGenotyping = Collections.unmodifiableList(new ArrayList<>(allelesUsedInGenotyping));
 
-        this.log10LikelihoodsOfAC = Arrays.copyOf(log10LikelihoodsOfAC, LOG_10_ARRAY_SIZES);
-        this.log10PriorsOfAC = Arrays.copyOf(log10PriorsOfAC, LOG_10_ARRAY_SIZES);
         this.log10PosteriorsOfAC = computePosteriors(log10LikelihoodsOfAC, log10PriorsOfAC);
         this.log10pRefByAllele = Collections.unmodifiableMap(new LinkedHashMap<>(log10pRefByAllele));
-    }
-
-    /**
-     * Return a new AFCalcResult with a new prior probability
-     *
-     * @param log10PriorsOfAC
-     * @return
-     */
-    public AFCalculationResult copyWithNewPriors(final double[] log10PriorsOfAC) {
-        Utils.nonNull(log10PriorsOfAC);
-        return new AFCalculationResult(alleleCountsOfMLE, allelesUsedInGenotyping, log10LikelihoodsOfAC, log10PriorsOfAC, log10pRefByAllele);
     }
 
     /**
@@ -150,34 +135,6 @@ public final class AFCalculationResult {
         return log10PosteriorsOfAC[AF1p];
     }
 
-    /**
-     * Get the log10 unnormalized -- across all ACs -- likelihood of AC == 0 for all alleles
-     */
-    public double getLog10LikelihoodOfAFEq0() {
-        return log10LikelihoodsOfAC[AF0];
-    }
-
-    /**
-     * Get the log10 unnormalized -- across all ACs -- likelihood of AC > 0 for any alleles
-     */
-    public double getLog10LikelihoodOfAFGT0() {
-        return log10LikelihoodsOfAC[AF1p];
-    }
-
-    /**
-     * Get the log10 unnormalized -- across all ACs -- prior probability of AC == 0 for all alleles
-     */
-    public double getLog10PriorOfAFEq0() {
-        return log10PriorsOfAC[AF0];
-    }
-
-    /**
-     * Get the log10 unnormalized -- across all ACs -- prior probability of AC > 0
-     */
-    public double getLog10PriorOfAFGT0() {
-        return log10PriorsOfAC[AF1p];
-    }
-
     @Override
     public String toString() {
         final List<String> byAllele = new LinkedList<>();
@@ -186,7 +143,7 @@ public final class AFCalculationResult {
                 byAllele.add(String.format("%s => MLE %d / posterior %.2f", a, getAlleleCountAtMLE(a), getLog10PosteriorOfAFEq0ForAllele(a)));
             }
         }
-        return String.format("AFCalc%n\t\tlog10PosteriorOfAFGT0=%.2f%n\t\t%s", getLog10LikelihoodOfAFGT0(), Utils.join("\n\t\t", byAllele));
+        return String.format("AFCalc%n\t\tlog10PosteriorOfAFGT0=%.2f%n\t\t%s", getLog10PosteriorOfAFGT0(), Utils.join("\n\t\t", byAllele));
     }
 
     /**
