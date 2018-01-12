@@ -40,7 +40,6 @@ public final class AlleleFrequencyCalculator {
     }
 
     public AFCalculationResult getLog10PNonRef(final VariantContext vc) {
-        // maxAltAlleles is not used by getLog10PNonRef, so don't worry about the 0
         return getLog10PNonRef(vc, defaultPloidy);
     }
     //TODO: this should be a class of static methods once the old AFCalculator is gone.
