@@ -68,28 +68,6 @@ public final class AFCalculationResultUnitTest extends GATKBaseTest {
     private static final Allele A = Allele.create("A", true);
     static final List<Allele> alleles = Arrays.asList(A, C);
 
-    @Test(dataProvider = "TestComputePosteriors")
-    private void testComputingPosteriors(final MyTest data) {
-        final int[] zeroAC = {0};
-        final AFCalculationResult result = new AFCalculationResult(zeroAC, alleles, data.Ls, log10Even, Collections.singletonMap(C, -1.0));
-
-        Assert.assertEquals(result.getLog10PosteriorOfAFEq0(), data.expectedPosteriors[0], 1e-3, "AF = 0 not expected");
-        Assert.assertEquals(result.getLog10PosteriorOfAFGT0(), data.expectedPosteriors[1], 1e-3, "AF > 0 not expected");
-
-        Assert.assertEquals(result.getAllelesUsedInGenotyping(), alleles, "alleles are different");
-
-        Assert.assertNotNull(result.toString());//just making sure it does not blow up, ignoring contents
-
-
-        Assert.assertEquals(result.getAlleleCountAtMLE(C), zeroAC[0]);
-        //getLog10PosteriorOfAFEq0ForAllele
-        //withNewPriors
-
-        Assert.assertEquals(result.getAlleleCountsOfMLE(), zeroAC, "getAlleleCountsOfMLE not as expected");
-        final double[] actualPosteriors = {result.getLog10PosteriorOfAFEq0(), result.getLog10PosteriorOfAFGT0()};
-        Assert.assertEquals(MathUtils.sumLog10(actualPosteriors), 1.0, 1e-3, "Posteriors don't sum to 1 with 1e-3 precision");
-    }
-
     @DataProvider(name = "TestIsPolymorphic")
     public Object[][] makeTestIsPolymorphic() {
         List<Object[]> tests = new ArrayList<>();
@@ -116,7 +94,6 @@ public final class AFCalculationResultUnitTest extends GATKBaseTest {
                 new int[]{0},
                 alleles,
                 MathUtils.normalizeLog10(new double[]{1 - pNonRef, pNonRef}),
-                log10Even,
                 Collections.singletonMap(C, Math.log10(1 - pNonRef)));
     }
 
@@ -139,14 +116,4 @@ public final class AFCalculationResultUnitTest extends GATKBaseTest {
                         + actualIsPoly + " but the expected result is " + shouldBePoly);
     }
 
-    @Test(dataProvider = "TestComputePosteriors")
-    private void test(final MyTest data) {
-        final AFCalculationResult result = new AFCalculationResult(new int[]{0}, alleles, data.Ls, log10Even, Collections.singletonMap(C, -1.0));
-
-        Assert.assertEquals(result.getLog10PosteriorOfAFEq0(), data.expectedPosteriors[0], 1e-3, "AF = 0 not expected");
-        Assert.assertEquals(result.getLog10PosteriorOfAFGT0(), data.expectedPosteriors[1], 1e-3, "AF > 0 not expected");
-
-        final double[] actualPosteriors = {result.getLog10PosteriorOfAFEq0(), result.getLog10PosteriorOfAFGT0()};
-        Assert.assertEquals(MathUtils.sumLog10(actualPosteriors), 1.0, 1e-3, "Posteriors don't sum to 1 with 1e-3 precision");
-    }
 }
