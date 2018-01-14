@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.engine.spark;
 
+import htsjdk.samtools.util.OverlapDetector;
 import org.broadinstitute.hellbender.utils.SerializableFunction;
 
 import htsjdk.samtools.SAMRecord;
@@ -20,7 +21,6 @@ import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.collections.IntervalsSkipList;
 import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
@@ -33,10 +33,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 public final class AddContextDataToReadSparkOptimized implements Serializable {
@@ -325,7 +323,7 @@ public final class AddContextDataToReadSparkOptimized implements Serializable {
      * This happens immediately, at the caller.
      */
     public static ArrayList<ContextShard> fillVariants(List<SimpleInterval> shardedIntervals, List<GATKVariant> variants, int margin) {
-        IntervalsSkipList<GATKVariant> intervals = new IntervalsSkipList<>(variants);
+        OverlapDetector<GATKVariant> intervals = OverlapDetector.create(variants);
         ArrayList<ContextShard> ret = new ArrayList<>();
         for (SimpleInterval s : shardedIntervals) {
             int start = Math.max(s.getStart() - margin, 1);
@@ -344,7 +342,7 @@ public final class AddContextDataToReadSparkOptimized implements Serializable {
             //
             // Since the read's length is less than margin, we know that by including all the variants that overlap
             // with the expanded interval we are also including all the variants that overlap with all the reads in this shard.
-            ret.add(new ContextShard(s).withVariants(intervals.getOverlapping(expandedInterval)));
+            ret.add(new ContextShard(s).withVariants(intervals.getOverlaps(expandedInterval).stream().sorted(Comparator.comparingInt(GATKVariant::getStart)).collect(Collectors.toList())));
         }
         return ret;
     }

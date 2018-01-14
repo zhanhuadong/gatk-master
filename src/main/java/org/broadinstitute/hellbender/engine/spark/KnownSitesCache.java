@@ -1,10 +1,10 @@
 package org.broadinstitute.hellbender.engine.spark;
 
+import htsjdk.samtools.util.OverlapDetector;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.engine.FeatureDataSource;
-import org.broadinstitute.hellbender.utils.collections.IntervalsSkipList;
 import org.broadinstitute.hellbender.utils.variant.GATKVariant;
 import org.broadinstitute.hellbender.utils.variant.VariantContextVariantAdapter;
 
@@ -19,19 +19,19 @@ class KnownSitesCache {
 
     private static final Logger log = LogManager.getLogger(KnownSitesCache.class);
 
-    private static final Map<List<String>, IntervalsSkipList<GATKVariant>> PATHS_TO_VARIANTS = new HashMap<>();
+    private static final Map<List<String>, OverlapDetector<GATKVariant>> PATHS_TO_VARIANTS = new HashMap<>();
 
-    public static synchronized IntervalsSkipList<GATKVariant> getVariants(List<String> paths) {
+    public static synchronized OverlapDetector<GATKVariant> getVariants(List<String> paths) {
         if (PATHS_TO_VARIANTS.containsKey(paths)) {
             return PATHS_TO_VARIANTS.get(paths);
         }
-        IntervalsSkipList<GATKVariant> variants = retrieveVariants(paths);
+        OverlapDetector<GATKVariant> variants = retrieveVariants(paths);
         PATHS_TO_VARIANTS.put(paths, variants);
         return variants;
     }
 
-    private static IntervalsSkipList<GATKVariant> retrieveVariants(List<String> paths) {
-        return new IntervalsSkipList<>(paths
+    private static OverlapDetector<GATKVariant> retrieveVariants(List<String> paths) {
+        return OverlapDetector.create(paths
                 .stream()
                 .map(KnownSitesCache::loadFromFeatureDataSource)
                 .flatMap(Collection::stream)

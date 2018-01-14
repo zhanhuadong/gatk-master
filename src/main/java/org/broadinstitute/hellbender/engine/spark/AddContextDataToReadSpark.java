@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.engine.spark;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import htsjdk.samtools.SAMSequenceDictionary;
+import htsjdk.samtools.util.OverlapDetector;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -16,16 +17,13 @@ import org.broadinstitute.hellbender.engine.filters.ReadFilterLibrary;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
-import org.broadinstitute.hellbender.utils.collections.IntervalsSkipList;
 import org.broadinstitute.hellbender.utils.read.GATKRead;
 import org.broadinstitute.hellbender.utils.reference.ReferenceBases;
 import org.broadinstitute.hellbender.utils.variant.GATKVariant;
 import scala.Tuple2;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -106,7 +104,7 @@ public class AddContextDataToReadSpark {
                 .collect(Collectors.toList());
 
         final Broadcast<ReferenceMultiSource> bReferenceSource = ctx.broadcast(referenceSource);
-        final Broadcast<IntervalsSkipList<GATKVariant>> variantsBroadcast = variantsPaths == null ? ctx.broadcast(new IntervalsSkipList<>(variants.collect())) : null;
+        final Broadcast<OverlapDetector<GATKVariant>> variantsBroadcast = variantsPaths == null ? ctx.broadcast(OverlapDetector.create(variants.collect())) : null;
 
         int maxLocatableSize = Math.min(shardSize, shardPadding);
         JavaRDD<Shard<GATKRead>> shardedReads = SparkSharder.shard(ctx, mappedReads, GATKRead.class, sequenceDictionary, intervalShards, maxLocatableSize);
@@ -119,20 +117,15 @@ public class AddContextDataToReadSpark {
                 // get reference bases for this shard (padded)
                 SimpleInterval paddedInterval = shard.getInterval().expandWithinContig(shardPadding, sequenceDictionary);
                 ReferenceBases referenceBases = bReferenceSource.getValue().getReferenceBases(paddedInterval);
-                final IntervalsSkipList<GATKVariant> intervalsSkipList = variantsPaths == null ? variantsBroadcast.getValue() :
+                final OverlapDetector<GATKVariant> overlapDetector = variantsPaths == null ? variantsBroadcast.getValue() :
                         KnownSitesCache.getVariants(variantsPaths);
                 Iterator<Tuple2<GATKRead, ReadContextData>> transform = Iterators.transform(shard.iterator(), new Function<GATKRead, Tuple2<GATKRead, ReadContextData>>() {
                     @Nullable
                     @Override
                     public Tuple2<GATKRead, ReadContextData> apply(@Nullable GATKRead r) {
-                        List<GATKVariant> overlappingVariants;
-                        if (SimpleInterval.isValid(r.getContig(), r.getStart(), r.getEnd())) {
-                            overlappingVariants = intervalsSkipList.getOverlapping(new SimpleInterval(r));
-                        } else {
-                            //Sometimes we have reads that do not form valid intervals (reads that do not consume any ref bases, eg CIGAR 61S90I
-                            //In those cases, we'll just say that nothing overlaps the read
-                            overlappingVariants = Collections.emptyList();
-                        }
+                        final List<GATKVariant> overlappingVariants = SimpleInterval.isValid(r.getContig(), r.getStart(), r.getEnd())
+                                ? overlapDetector.getOverlaps(r).stream().sorted(Comparator.comparingInt(GATKVariant::getStart)).collect(Collectors.toList())
+                                : Collections.emptyList();
                         return new Tuple2<>(r, new ReadContextData(referenceBases, overlappingVariants));
                     }
                 });
