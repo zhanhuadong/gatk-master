@@ -120,7 +120,7 @@ public final class SVFileUtils {
                 if (line.startsWith(REFERENCE_GAP_INTERVAL_FILE_COMMENT_LINE_PROMPT)) {
                     continue;
                 }
-                final List<String> tokens = Utils.split(line, "\t");
+                final List<String> tokens = Utils.split(line, '\t');
                 if ( tokens.size() != 3 ) {
                     throw new GATKException("Interval file " + intervalsFilePath + " line " +
                             lineNo + " did not contain 3 columns: " + line);

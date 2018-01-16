@@ -183,7 +183,7 @@ public final class AlleleBiasedDownsamplingUtils {
                     continue;
                 }
 
-                final List<String> fields = Utils.split(line, "\t");
+                final List<String> fields = Utils.split(line, '\t');
                 if (fields.size() != 2){
                     throw new UserException.MalformedFile("Contamination file must have exactly two, tab-delimited columns. Offending line:\n" + line);
                 }

@@ -187,7 +187,7 @@ public abstract class AS_StrandBiasTest extends StrandBiasTest implements Reduci
             String alleleData = rawDataPerAllele.get(i);
             if (!alleleData.isEmpty()) {
                 List<Integer> alleleList = perAlleleValues.get(myData.getAlleles().get(i));
-                List<String> rawListEntriesAsStringVector = Utils.split(alleleData, ",");
+                List<String> rawListEntriesAsStringVector = Utils.split(alleleData, ',');
                 //Read counts will only ever be integers
                 for (String s : rawListEntriesAsStringVector) {
                     if (!s.isEmpty()) {

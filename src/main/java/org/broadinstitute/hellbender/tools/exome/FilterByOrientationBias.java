@@ -182,9 +182,10 @@ public class FilterByOrientationBias extends VariantWalker {
 
     private Transition convertParameterToTransition(final String stringTransition) {
         final List<String> splitTransitionList= Utils.split(stringTransition, '/');
-        final String[] splitTransition = splitTransitionList.toArray(new String[splitTransitionList.size()]);
+        final String[] splitTransition = splitTransitionList
+                .toArray(new String[splitTransitionList.size()]);
         if (!isValidTransition(splitTransition)) {
-            throw new UserException("Invalid artifact mode: " + String.join("/", splitTransition));
+            throw new UserException("Invalid artifact mode: " + stringTransition);
         }
 
         return Transition.transitionOf(splitTransition[0].charAt(0), splitTransition[1].charAt(0));

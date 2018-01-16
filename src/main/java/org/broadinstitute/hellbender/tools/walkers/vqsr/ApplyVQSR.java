@@ -538,7 +538,7 @@ public class ApplyVQSR extends MultiVariantWalker {
             }
 
             final String prevASfilters = vc.getAttributeAsString(GATKVCFConstants.AS_FILTER_STATUS_KEY,"");
-            if (prevASfilters.isEmpty() ) {
+            if ( prevASfilters.isEmpty() ) {
                 prevASfiltersList = new String[0];
             }
             else {

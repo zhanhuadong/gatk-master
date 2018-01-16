@@ -259,9 +259,9 @@ public final class PSScorer {
         if (read.hasAttribute(tag)) {
             final int expectedTokens = Math.max(contigIndex, Math.max(cigarIndex, numMismatchesIndex)) + 1;
             final String tagValue = read.getAttributeAsString(tag);
-            final List<String> tagTokens = Utils.split(tagValue, ";");
+            final List<String> tagTokens = Utils.split(tagValue, ';');
             for (final String tok : tagTokens) {
-                final List<String> subtokens = Utils.split(tok, ",");
+                final List<String> subtokens = Utils.split(tok, ',');
                 if (subtokens.size() < expectedTokens) {
                     throw new UserException.BadInput("Error parsing " + tag + " tag: expected at least " + expectedTokens + " values per alignment but found " + subtokens.size());
                 }

@@ -276,7 +276,7 @@ public final class ClipReads extends ReadWalker {
             cyclesToClip = new ArrayList<>();
             for (final String range : Utils.split(cyclesToClipArg,',') ) {
                 try {
-                    final List<String> elts = Utils.split(range, '=');
+                    final List<String> elts = Utils.split(range, '-');
                     final int start = Integer.parseInt(elts.get(0)) - 1;
                     final int stop = Integer.parseInt(elts.get(1)) - 1;
 

@@ -423,7 +423,7 @@ public class BreakpointEvidence {
             if (tagSA == null) {
                 return null;
             } else {
-                final List<String> saStrings = Utils.split(tagSA, ";");
+                final List<String> saStrings = Utils.split(tagSA, ';');
                 final List<SAMapping> supplementaryAlignments = new ArrayList<>(saStrings.size());
                 for (final String saString : saStrings) {
                     final String[] saFields = saString.split(",", -1);

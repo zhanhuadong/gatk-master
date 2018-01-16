@@ -96,7 +96,7 @@ public final class GATKReport {
                 version.equals(GATKReportVersion.V0_2))
             throw new UserException("The GATK no longer supports reading legacy GATK Reports. Please use v1.0 or newer.");
 
-        int nTables = Integer.parseInt(Utils.split(reportHeader, ":").get(2));
+        int nTables = Integer.parseInt(Utils.split(reportHeader, ':').get(2));
 
         // Read each table according ot the number of tables
         for (int i = 0; i < nTables; i++) {
