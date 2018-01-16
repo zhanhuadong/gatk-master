@@ -300,7 +300,7 @@ public final class GenomeLocUnitTest extends GATKBaseTest {
         testMerge(test.locs);
     }
 
-    @Test(expectedExceptions = GATKException.class)
+    @Test(expectedExceptions = IllegalArgumentException.class)
     public void testNotContiguousLocs() {
         final List<GenomeLoc> locs = new ArrayList<>(1);
         locs.add(loc1);
