@@ -632,7 +632,6 @@ public final class GATKVariantContextUtils {
      * @param priorityListOfVCs         priority list detailing the order in which we should grab the VCs
      * @param filteredRecordMergeType   merge type for filtered records
      * @param genotypeMergeOptions      merge option for genotypes
-     * @param annotateOrigin            should we annotate the set it came from?
      * @param filteredAreUncalled       are filtered records uncalled?
      * @param mergeInfoWithMaxAC        should we merge in info from the VC with maximum allele count?
      * @return new VariantContext       representing the merge of unsortedVCs
@@ -641,15 +640,11 @@ public final class GATKVariantContextUtils {
                                              final List<String> priorityListOfVCs,
                                              final FilteredRecordMergeType filteredRecordMergeType,
                                              final GenotypeMergeType genotypeMergeOptions,
-                                             final boolean annotateOrigin,
                                              final boolean filteredAreUncalled,
                                              final boolean mergeInfoWithMaxAC) {
         int originalNumOfVCs = priorityListOfVCs == null ? 0 : priorityListOfVCs.size();
         if ( unsortedVCs == null || unsortedVCs.isEmpty() )
             return null;
-
-        if ( annotateOrigin && priorityListOfVCs == null && originalNumOfVCs == 0)
-            throw new IllegalArgumentException("Cannot merge calls and annotate their origins without a complete priority list of VariantContexts or the number of original VariantContexts");
 
         final List<VariantContext> preFilteredVCs = sortVariantContextsByPriority(unsortedVCs, priorityListOfVCs, genotypeMergeOptions);
         // Make sure all variant contexts are padded with reference base in case of indels if necessary
@@ -785,25 +780,6 @@ public final class GATKVariantContextUtils {
         // if at least one record was unfiltered and we want a union, clear all of the filters
         if ( (filteredRecordMergeType == FilteredRecordMergeType.KEEP_IF_ANY_UNFILTERED && nFiltered != VCs.size()) || filteredRecordMergeType == FilteredRecordMergeType.KEEP_UNCONDITIONAL )
             filters.clear();
-
-
-        if (annotateOrigin) { // we care about where the call came from
-            String setValue;
-            if ( nFiltered == 0 && variantSources.size() == originalNumOfVCs) // nothing was unfiltered
-                setValue = MERGE_INTERSECTION;
-            else if ( nFiltered == VCs.size() )     // everything was filtered out
-                setValue = MERGE_FILTER_IN_ALL;
-            else if ( variantSources.isEmpty() )    // everyone was reference
-                setValue = MERGE_REF_IN_ALL;
-            else {
-                final LinkedHashSet<String> s = new LinkedHashSet<>();
-                for ( final VariantContext vc : VCs )
-                    if ( vc.isVariant() )
-                        s.add( vc.isFiltered() ? MERGE_FILTER_PREFIX + vc.getSource() : vc.getSource() );
-                setValue = Utils.join("-", s);
-            }
-
-        }
 
         if ( depth > 0 )
             attributes.put(VCFConstants.DEPTH_KEY, String.valueOf(depth));
