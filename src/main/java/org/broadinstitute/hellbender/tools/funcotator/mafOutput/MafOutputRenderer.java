@@ -164,7 +164,7 @@ public class MafOutputRenderer extends OutputRenderer {
         // Go through Gencode funcotations as they're the basis for each line:
         for ( final GencodeFuncotation gencodeFuncotation : gencodeFuncotations ) {
             // TODO: If a funcotation is empty, DO NOT ADD IT!
-            outputMap.put("Hugo_symbol", gencodeFuncotation.getHugoSymbol());
+            outputMap.put("Hugo_Symbol", gencodeFuncotation.getHugoSymbol());
             outputMap.put("NCBI_Build", gencodeFuncotation.getNcbiBuild());
             outputMap.put("Chromosome", gencodeFuncotation.getChromosome());
             outputMap.put("Start_Position", gencodeFuncotation.getStart());
