@@ -160,21 +160,38 @@ public class MafOutputRenderer extends OutputRenderer {
 
         // Go through Gencode funcotations as they're the basis for each line:
         for ( final GencodeFuncotation gencodeFuncotation : gencodeFuncotations ) {
+            // TODO: If a funcotation is empty, DO NOT ADD IT!
             outputMap.put("Hugo_symbol", gencodeFuncotation.getHugoSymbol());
             outputMap.put("NCBI_Build", gencodeFuncotation.getNcbiBuild());
             outputMap.put("Chromosome", gencodeFuncotation.getChromosome());
             outputMap.put("Start_Position", gencodeFuncotation.getStart());
             outputMap.put("End_Position", gencodeFuncotation.getEnd());
             outputMap.put("Strand", gencodeFuncotation.getTranscriptStrand());
+            outputMap.put("Transcript_Strand", gencodeFuncotation.getTranscriptStrand());
             outputMap.put("VariantClassification", gencodeFuncotation.getVariantClassification());
             outputMap.put("Variant_Type", gencodeFuncotation.getVariantType());
             outputMap.put("Reference_Allele", gencodeFuncotation.getRefAllele());
             outputMap.put("Tumor_Seq_Allele1", gencodeFuncotation.getTumorSeqAllele1());
             outputMap.put("Tumor_Seq_Allele2", gencodeFuncotation.getTumorSeqAllele2());
+            outputMap.put("secondary_variant_classification", gencodeFuncotation.getSecondaryVariantClassification() );
+            outputMap.put("Genome_Change", gencodeFuncotation.getGenomeChange() );
+            outputMap.put("Annotation_Transcript", gencodeFuncotation.getAnnotationTranscript() );
+            outputMap.put("Transcript_Exon", gencodeFuncotation.getTranscriptExonNumber() );
+            outputMap.put("Transcript_Position", gencodeFuncotation.getTranscriptPos() );
+            outputMap.put("cDNA_Change", gencodeFuncotation.getcDnaChange() );
+            outputMap.put("Codon_Change", gencodeFuncotation.getCodonChange() );
+            outputMap.put("Protein_Change", gencodeFuncotation.getProteinChange() );
+            outputMap.put("gc_content", gencodeFuncotation.getGcContent() );
+            outputMap.put("ref_context", gencodeFuncotation.getReferenceContext() );
+            outputMap.put("Other_Transcripts", gencodeFuncotation.getOtherTranscripts() );
         }
 
         for ( final Funcotation funcotation : otherFuncotations ) {
-            //TODO: For this to work you'll need to make annotations work as maps ala issue #3919
+            //TODO: You'll need to match up each funcotation type with the known field names so that they're in the same columns each time!
+            for ( final String field : funcotation.getFieldNames() ) {
+                outputMap.put(field, funcotation.getField(field));
+            }
+
         }
 
     }

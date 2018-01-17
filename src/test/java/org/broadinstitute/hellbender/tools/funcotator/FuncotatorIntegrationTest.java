@@ -31,10 +31,10 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
     @DataProvider
     Object[][] provideForIntegrationTest() {
         return new Object[][] {
-                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME},
-                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.TRANSCRIPT_ID},
-                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR19_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR19, FuncotatorTestConstants.MUC16_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME},
-                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR19_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR19, FuncotatorTestConstants.MUC16_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.TRANSCRIPT_ID}
+                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME, FuncotatorArgumentDefinitions.OutputFormatType.VCF},
+                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.TRANSCRIPT_ID, FuncotatorArgumentDefinitions.OutputFormatType.VCF},
+                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR19_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR19, FuncotatorTestConstants.MUC16_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME, FuncotatorArgumentDefinitions.OutputFormatType.VCF},
+                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR19_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR19, FuncotatorTestConstants.MUC16_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.TRANSCRIPT_ID, FuncotatorArgumentDefinitions.OutputFormatType.VCF}
         };
     }
 
@@ -46,7 +46,8 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
                                 final String referenceFileName,
                                 final String variantFileName,
                                 final String transcriptName,
-                                final SimpleKeyXsvFuncotationFactory.XsvDataKeyType xsvMatchType) throws IOException {
+                                final SimpleKeyXsvFuncotationFactory.XsvDataKeyType xsvMatchType,
+                                final FuncotatorArgumentDefinitions.OutputFormatType outputFormatType) throws IOException {
 
         final File outputFile = createTempFile(tmpOutDir + File.separator + "funcotator_tmp_out", ".vcf");
         final List<String> arguments = new ArrayList<>();
@@ -62,7 +63,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         arguments.add("-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME);
         arguments.add(outputFile.getAbsolutePath());
         arguments.add("-" + FuncotatorArgumentDefinitions.OUTPUT_FORMAT_LONG_NAME);
-        arguments.add(FuncotatorArgumentDefinitions.OutputFormatType.VCF.toString());
+        arguments.add(outputFormatType.toString());
 
         runCommandLine(arguments);
     }
@@ -98,7 +99,8 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
                                        final String referenceFileName,
                                        final String variantFileName,
                                        final String transcriptName,
-                                       final SimpleKeyXsvFuncotationFactory.XsvDataKeyType xsvMatchType) throws IOException {
+                                       final SimpleKeyXsvFuncotationFactory.XsvDataKeyType xsvMatchType,
+                                       final FuncotatorArgumentDefinitions.OutputFormatType outputFormatType) throws IOException {
 
         final String outFileName = "funcotator_tmp_out_" + xsvMatchType.toString() + "_" + transcriptName + ".vcf";
 
@@ -118,7 +120,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         arguments.add("-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME);
         arguments.add(outputFile.getAbsolutePath());
         arguments.add("-" + FuncotatorArgumentDefinitions.OUTPUT_FORMAT_LONG_NAME);
-        arguments.add(FuncotatorArgumentDefinitions.OutputFormatType.VCF.toString());
+        arguments.add(outputFormatType.toString());
 
         // Transcript selection:
         arguments.add("--" + FuncotatorArgumentDefinitions.TRANSCRIPT_SELECTION_MODE_LONG_NAME);
