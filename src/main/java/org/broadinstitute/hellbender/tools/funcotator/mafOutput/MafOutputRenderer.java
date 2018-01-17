@@ -1,12 +1,16 @@
 package org.broadinstitute.hellbender.tools.funcotator.mafOutput;
 
 import htsjdk.variant.variantcontext.VariantContext;
+import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.funcotator.DataSourceFuncotationFactory;
 import org.broadinstitute.hellbender.tools.funcotator.Funcotation;
 import org.broadinstitute.hellbender.tools.funcotator.Funcotator;
 import org.broadinstitute.hellbender.tools.funcotator.OutputRenderer;
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.gencode.GencodeFuncotation;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -23,8 +27,18 @@ public class MafOutputRenderer extends OutputRenderer {
     //==================================================================================================================
     // Public Static Members:
 
+    /**
+     * Version of the MAF standard that this {@link MafOutputRenderer} writes.
+     */
+    public static String VERSION = "2.4";
+
     //==================================================================================================================
     // Private Static Members:
+
+    /**
+     * The string representing a comment in a MAF file.
+     */
+    protected static final String COMMENT_STRING = "#";
 
     /**
      * Value to insert into columns with unspecified annotations.
@@ -61,9 +75,21 @@ public class MafOutputRenderer extends OutputRenderer {
      */
     private final Path outputFilePath;
 
+    /**
+     * {@link java.io.PrintWriter} to which to write the output MAF file.
+     */
+    private PrintWriter printWriter;
+
     //==================================================================================================================
     // Constructors:
 
+    /**
+     * Create a {@link MafOutputRenderer}.
+     * @param outputFilePath {@link Path} to output file (must not be null).
+     * @param dataSources {@link List} of {@link DataSourceFuncotationFactory} to back our annotations (must not be null).
+     * @param unaccountedForDefaultAnnotations {@link LinkedHashMap} of default annotations that must be added.
+     * @param unaccountedForOverrideAnnotations {@link LinkedHashMap} of override annotations that must be added.
+     */
     public MafOutputRenderer(final Path outputFilePath,
                              final List<DataSourceFuncotationFactory> dataSources,
                              final LinkedHashMap<String, String> unaccountedForDefaultAnnotations,
@@ -75,8 +101,12 @@ public class MafOutputRenderer extends OutputRenderer {
 
         // Merge the annotations into our manualAnnotations:
         manualAnnotations = new LinkedHashMap<>();
-        manualAnnotations.putAll(unaccountedForDefaultAnnotations);
-        manualAnnotations.putAll(unaccountedForOverrideAnnotations);
+        if ( unaccountedForDefaultAnnotations != null ) {
+            manualAnnotations.putAll(unaccountedForDefaultAnnotations);
+        }
+        if ( unaccountedForOverrideAnnotations != null ) {
+            manualAnnotations.putAll(unaccountedForOverrideAnnotations);
+        }
 
         // Cache the manual annotation string so we can pass it easily into any Funcotations:
         manualAnnotationSerializedString = (manualAnnotations.size() != 0 ? String.join( FIELD_DELIMITER, manualAnnotations.values() ) + FIELD_DELIMITER : "");
@@ -89,12 +119,19 @@ public class MafOutputRenderer extends OutputRenderer {
 
     @Override
     public void open() {
-
+        try {
+            printWriter = new PrintWriter(Files.newOutputStream(outputFilePath));
+            writeHeader();
+        }
+        catch (final IOException ex) {
+            throw new UserException("Error opening output file path: " + outputFilePath.toUri().toString(), ex);
+        }
     }
 
     @Override
     public void close() {
-
+        printWriter.flush();
+        printWriter.close();
     }
 
     @Override
@@ -150,9 +187,24 @@ public class MafOutputRenderer extends OutputRenderer {
     // Instance Methods:
 
     /**
+     * Write the given line to the {@link #printWriter}.
+     * @param line The {@link String} to write as a line to the {@link #printWriter}.
+     */
+    private void writeLine(final String line) {
+        printWriter.write(line + System.lineSeparator());
+    }
+
+    /**
+     * Write the header to the output file.
+     */
+    protected void writeHeader() {
+        writeLine(COMMENT_STRING + "version " + VERSION);
+    }
+
+    /**
      * Initializes {@link MafOutputRenderer#defaultMap} with the default keys for the columns in a MAF file.
      */
-    void initializeDefaultMapWithKeys() {
+    protected void initializeDefaultMapWithKeys() {
         
         // Baseline required fields:
         defaultMap.put("Hugo_Symbol",                                 UNKNOWN_VALUE_STRING );
