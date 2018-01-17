@@ -12,9 +12,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A Funcotator output renderer for writing to MAF files.
@@ -186,13 +189,22 @@ public class MafOutputRenderer extends OutputRenderer {
             outputMap.put("Other_Transcripts", gencodeFuncotation.getOtherTranscripts() );
         }
 
+        // Grab data from other funcotations:
         for ( final Funcotation funcotation : otherFuncotations ) {
             //TODO: You'll need to match up each funcotation type with the known field names so that they're in the same columns each time!
             for ( final String field : funcotation.getFieldNames() ) {
                 outputMap.put(field, funcotation.getField(field));
             }
-
         }
+
+        // Write the output:
+        writeLine(
+                outputMap.entrySet().stream()
+                        .map(e -> e.getValue())
+                        .map(e -> e == null ? UNKNOWN_VALUE_STRING : e)
+                        .map(Object::toString)
+                        .collect(Collectors.joining("\t"))
+        );
 
     }
 
@@ -215,7 +227,25 @@ public class MafOutputRenderer extends OutputRenderer {
      * Write the header to the output file.
      */
     protected void writeHeader() {
+        // Write out version:
         writeLine(COMMENT_STRING + "version " + VERSION);
+        writeLine(COMMENT_STRING + COMMENT_STRING);
+
+        // Write tool name and the data sources with versions:
+        printWriter.write(COMMENT_STRING);
+        printWriter.write(COMMENT_STRING);
+        printWriter.write(" Funcotator ");
+        printWriter.write(new SimpleDateFormat("yyyymmdd'T'hhmmss").format(new Date()).toString());
+        for (final DataSourceFuncotationFactory funcotationFactory : dataSourceFactories) {
+            printWriter.write(" | ");
+            printWriter.write(funcotationFactory.getType().toString());
+            printWriter.write(" ");
+            printWriter.write(funcotationFactory.getVersion());
+        }
+        writeLine("");
+
+        // Write the column headers:
+        writeLine( defaultMap.keySet().stream().collect(Collectors.joining("\t")) );
     }
 
     /**
