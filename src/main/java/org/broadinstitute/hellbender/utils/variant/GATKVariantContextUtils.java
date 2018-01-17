@@ -627,18 +627,30 @@ public final class GATKVariantContextUtils {
      * simpleMerge does not verify any more unique sample names EVEN if genotypeMergeOptions == GenotypeMergeType.REQUIRE_UNIQUE. One should use
      * SampleUtils.verifyUniqueSamplesNames to check that before using simpleMerge.
      *
-     * For more information on this method see: http://www.thedistractionnetwork.com/programmer-problem/
+     * Output VariantContext has
+     *  source = source of first sorted input vc
+     *  depth = total depth of all input vcs
+     *  ID = comma-separated string of unique IDs of input vcs
+     *  qual = qual of first sorted input vc with a qual
+     *  ref allele = longest ref allele of input vcs
+     *  alleles = union of all input vcs' alleles relative to a common reference
+     *  genotypes = original genotypes BUT with PLs and ADs removed from genotypes with fewer alleles than the overall union of alleles
+     *  //TODO:     what does it mean that AC and AF are recalculated in this case?
+     *  attributes (INFO) = for all attributes that had a single common value in all input vcs, use the common value.  vcs not containing
+     *                      an attribute are ignored i.e. X=5 . . . X=5 . . . [missing X] has a common value of 5.
+     *
+     *
      * @param unsortedVCs               collection of unsorted VCs
      * @param priorityListOfVCs         priority list detailing the order in which we should grab the VCs
      * @param filteredRecordMergeType   merge type for filtered records
      * @param genotypeMergeOptions      merge option for genotypes
+     * @throws IllegalArgumentException if input vcs don't all have the same start or if their reference alleles have incompatible bases
      * @return new VariantContext       representing the merge of unsortedVCs
      */
     public static VariantContext simpleMerge(final Collection<VariantContext> unsortedVCs,
                                              final List<String> priorityListOfVCs,
                                              final FilteredRecordMergeType filteredRecordMergeType,
                                              final GenotypeMergeType genotypeMergeOptions) {
-        int originalNumOfVCs = priorityListOfVCs == null ? 0 : priorityListOfVCs.size();
         if ( unsortedVCs == null || unsortedVCs.isEmpty() )
             return null;
 
@@ -659,7 +671,6 @@ public final class GATKVariantContextUtils {
 
         VariantContext longestVC = first;
         int depth = 0;
-        int maxAC = -1;
         double log10PError = CommonInfo.NO_LOG10_PERROR;
         boolean anyVCHadFiltersApplied = false;
         GenotypesContext genotypes = GenotypesContext.create();
