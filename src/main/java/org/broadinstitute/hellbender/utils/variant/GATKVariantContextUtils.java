@@ -633,15 +633,13 @@ public final class GATKVariantContextUtils {
      * @param filteredRecordMergeType   merge type for filtered records
      * @param genotypeMergeOptions      merge option for genotypes
      * @param filteredAreUncalled       are filtered records uncalled?
-     * @param mergeInfoWithMaxAC        should we merge in info from the VC with maximum allele count?
      * @return new VariantContext       representing the merge of unsortedVCs
      */
     public static VariantContext simpleMerge(final Collection<VariantContext> unsortedVCs,
                                              final List<String> priorityListOfVCs,
                                              final FilteredRecordMergeType filteredRecordMergeType,
                                              final GenotypeMergeType genotypeMergeOptions,
-                                             final boolean filteredAreUncalled,
-                                             final boolean mergeInfoWithMaxAC) {
+                                             final boolean filteredAreUncalled) {
         int originalNumOfVCs = priorityListOfVCs == null ? 0 : priorityListOfVCs.size();
         if ( unsortedVCs == null || unsortedVCs.isEmpty() )
             return null;
@@ -670,10 +668,8 @@ public final class GATKVariantContextUtils {
         VariantContext longestVC = first;
         int depth = 0;
         int maxAC = -1;
-        final Map<String, Object> attributesWithMaxAC = new LinkedHashMap<>();
         double log10PError = CommonInfo.NO_LOG10_PERROR;
         boolean anyVCHadFiltersApplied = false;
-        VariantContext vcWithMaxAC = null;
         GenotypesContext genotypes = GenotypesContext.create();
 
         // counting the number of filtered and variant VCs
@@ -713,26 +709,6 @@ public final class GATKVariantContextUtils {
             if (vc.hasAttribute(VCFConstants.DEPTH_KEY))
                 depth += vc.getAttributeAsInt(VCFConstants.DEPTH_KEY, 0);
             if ( vc.hasID() ) rsIDs.add(vc.getID());
-            if (mergeInfoWithMaxAC && vc.hasAttribute(VCFConstants.ALLELE_COUNT_KEY)) {
-                String rawAlleleCounts = vc.getAttributeAsString(VCFConstants.ALLELE_COUNT_KEY, null);
-                // lets see if the string contains a "," separator
-                if (rawAlleleCounts.contains(VCFConstants.INFO_FIELD_ARRAY_SEPARATOR)) {
-                    final List<String> alleleCountArray = Arrays.asList(rawAlleleCounts.substring(1, rawAlleleCounts.length() - 1).split(VCFConstants.INFO_FIELD_ARRAY_SEPARATOR));
-                    for (final String alleleCount : alleleCountArray) {
-                        final int ac = Integer.valueOf(alleleCount.trim());
-                        if (ac > maxAC) {
-                            maxAC = ac;
-                            vcWithMaxAC = vc;
-                        }
-                    }
-                } else {
-                    final int ac = Integer.valueOf(rawAlleleCounts);
-                    if (ac > maxAC) {
-                        maxAC = ac;
-                        vcWithMaxAC = vc;
-                    }
-                }
-            }
 
             for (final Map.Entry<String, Object> p : vc.getAttributes().entrySet()) {
                 final String key = p.getKey();
@@ -772,11 +748,6 @@ public final class GATKVariantContextUtils {
             }
         }
 
-        // take the VC with the maxAC and pull the attributes into a modifiable map
-        if ( mergeInfoWithMaxAC && vcWithMaxAC != null ) {
-            attributesWithMaxAC.putAll(vcWithMaxAC.getAttributes());
-        }
-
         // if at least one record was unfiltered and we want a union, clear all of the filters
         if ( (filteredRecordMergeType == FilteredRecordMergeType.KEEP_IF_ANY_UNFILTERED && nFiltered != VCs.size()) || filteredRecordMergeType == FilteredRecordMergeType.KEEP_UNCONDITIONAL )
             filters.clear();
@@ -794,7 +765,7 @@ public final class GATKVariantContextUtils {
         if ( anyVCHadFiltersApplied ) {
             builder.filters(filters.isEmpty() ? filters : new TreeSet<>(filters));
         }
-        builder.attributes(new TreeMap<>(mergeInfoWithMaxAC ? attributesWithMaxAC : attributes));
+        builder.attributes(new TreeMap<>(attributes));
 
         // Trim the padded bases of all alleles if necessary
         final VariantContext merged = builder.make();
