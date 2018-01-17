@@ -20,6 +20,8 @@ public class FuncotatorArgumentDefinitions {
 
     public static final String DATA_SOURCES_PATH_LONG_NAME = "data-sources-path";
 
+    public static final String OUTPUT_FORMAT_LONG_NAME = "output-file-format";
+
     // ------------------------------------------------------------
     // Definitions for optional arguments:
 
@@ -245,5 +247,13 @@ public class FuncotatorArgumentDefinitions {
     public enum ReferenceVersionType {
         hg19,
         hg38
+    }
+
+    /**
+     * The file format of the output file.
+     */
+    public enum OutputFormatType {
+        VCF,
+        MAF
     }
 }

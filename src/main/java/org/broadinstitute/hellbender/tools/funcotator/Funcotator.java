@@ -10,7 +10,6 @@ import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
-import picard.cmdline.programgroups.VariantEvaluationProgramGroup;
 import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
@@ -23,6 +22,7 @@ import org.broadinstitute.hellbender.tools.funcotator.vcfOutput.VcfOutputRendere
 import org.broadinstitute.hellbender.utils.codecs.gencode.GencodeGtfFeature;
 import org.broadinstitute.hellbender.utils.codecs.xsvLocatableTable.XsvTableFeature;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
+import picard.cmdline.programgroups.VariantEvaluationProgramGroup;
 
 import java.io.File;
 import java.io.IOException;
@@ -232,6 +232,12 @@ public class Funcotator extends VariantWalker {
             doc = "The path to a data source folder for Funcotator.  May be specified more than once to handle multiple data source folders."
     )
     protected List<String> dataSourceDirectories;
+
+    @Argument(
+            fullName =  FuncotatorArgumentDefinitions.OUTPUT_FORMAT_LONG_NAME,
+            doc = "The output file format.  Either VCF or MAF"
+    )
+    protected FuncotatorArgumentDefinitions.OutputFormatType outputFormatType;
 
     //-----------------------------------------------------
     // Optional args:

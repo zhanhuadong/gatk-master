@@ -19,6 +19,13 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
 
     //TODO: Add checks on the output file.
 
+    // Temp directory in which to place output files.
+    private static final File tmpOutDir;
+
+    static {
+        tmpOutDir = createTempDir("funcotatorTmpFolder");
+    }
+
     //==================================================================================================================
 
     @DataProvider
@@ -41,7 +48,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
                                 final String transcriptName,
                                 final SimpleKeyXsvFuncotationFactory.XsvDataKeyType xsvMatchType) throws IOException {
 
-        final File outputFile = createTempFile("funcotator_tmp_out", ".vcf");
+        final File outputFile = createTempFile(tmpOutDir + File.separator + "funcotator_tmp_out", ".vcf");
         final List<String> arguments = new ArrayList<>();
 
         arguments.add("--" + FuncotatorArgumentDefinitions.DATA_SOURCES_PATH_LONG_NAME);
@@ -54,6 +61,8 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         arguments.add(variantFileName);
         arguments.add("-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME);
         arguments.add(outputFile.getAbsolutePath());
+        arguments.add("-" + FuncotatorArgumentDefinitions.OUTPUT_FORMAT_LONG_NAME);
+        arguments.add(FuncotatorArgumentDefinitions.OutputFormatType.VCF.toString());
 
         runCommandLine(arguments);
     }
@@ -61,7 +70,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
     @Test(enabled = false)
     public void spotCheck() throws IOException {
 
-        final File outputFile = createTempFile("funcotator_tmp_out", ".vcf");
+        final File outputFile = createTempFile(tmpOutDir + File.separator + "funcotator_tmp_out", ".vcf");
         final List<String> arguments = new ArrayList<>();
 
         arguments.add("-" + StandardArgumentDefinitions.VARIANT_SHORT_NAME);
@@ -77,6 +86,8 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         arguments.add(FuncotatorArgumentDefinitions.ReferenceVersionType.hg19.toString());
         arguments.add("-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME);
         arguments.add(outputFile.getAbsolutePath());
+        arguments.add("-" + FuncotatorArgumentDefinitions.OUTPUT_FORMAT_LONG_NAME);
+        arguments.add(FuncotatorArgumentDefinitions.OutputFormatType.VCF.toString());
 
         runCommandLine(arguments);
     }
@@ -91,7 +102,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
 
         final String outFileName = "funcotator_tmp_out_" + xsvMatchType.toString() + "_" + transcriptName + ".vcf";
 
-        final File outputFile = createTempFile(outFileName.substring(0,outFileName.length()-4), outFileName.substring(outFileName.length()-4));
+        final File outputFile = createTempFile(tmpOutDir + File.separator + outFileName.substring(0,outFileName.length()-4), outFileName.substring(outFileName.length()-4));
 
         final List<String> arguments = new ArrayList<>();
 
@@ -106,6 +117,8 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         arguments.add(variantFileName);
         arguments.add("-" + StandardArgumentDefinitions.OUTPUT_SHORT_NAME);
         arguments.add(outputFile.getAbsolutePath());
+        arguments.add("-" + FuncotatorArgumentDefinitions.OUTPUT_FORMAT_LONG_NAME);
+        arguments.add(FuncotatorArgumentDefinitions.OutputFormatType.VCF.toString());
 
         // Transcript selection:
         arguments.add("--" + FuncotatorArgumentDefinitions.TRANSCRIPT_SELECTION_MODE_LONG_NAME);
