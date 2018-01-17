@@ -633,7 +633,6 @@ public final class GATKVariantContextUtils {
      * @param filteredRecordMergeType   merge type for filtered records
      * @param genotypeMergeOptions      merge option for genotypes
      * @param annotateOrigin            should we annotate the set it came from?
-     * @param printMessages             should we print messages?
      * @param setKey                    the key name of the set
      * @param filteredAreUncalled       are filtered records uncalled?
      * @param mergeInfoWithMaxAC        should we merge in info from the VC with maximum allele count?
@@ -644,14 +643,13 @@ public final class GATKVariantContextUtils {
                                              final FilteredRecordMergeType filteredRecordMergeType,
                                              final GenotypeMergeType genotypeMergeOptions,
                                              final boolean annotateOrigin,
-                                             final boolean printMessages,
                                              final String setKey,
                                              final boolean filteredAreUncalled,
-                                             final boolean mergeInfoWithMaxAC ) {
+                                             final boolean mergeInfoWithMaxAC) {
         int originalNumOfVCs = priorityListOfVCs == null ? 0 : priorityListOfVCs.size();
         if ( unsortedVCs == null || unsortedVCs.isEmpty() )
             return null;
-        
+
         if ( annotateOrigin && priorityListOfVCs == null && originalNumOfVCs == 0)
             throw new IllegalArgumentException("Cannot merge calls and annotate their origins without a complete priority list of VariantContexts or the number of original VariantContexts");
 
@@ -832,7 +830,6 @@ public final class GATKVariantContextUtils {
 
         // Trim the padded bases of all alleles if necessary
         final VariantContext merged = builder.make();
-        if ( printMessages && remapped ) System.out.printf("Remapped => %s%n", merged);
         return merged;
     }
 
