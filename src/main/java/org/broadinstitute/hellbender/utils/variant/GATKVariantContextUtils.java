@@ -633,7 +633,6 @@ public final class GATKVariantContextUtils {
      * @param filteredRecordMergeType   merge type for filtered records
      * @param genotypeMergeOptions      merge option for genotypes
      * @param annotateOrigin            should we annotate the set it came from?
-     * @param setKey                    the key name of the set
      * @param filteredAreUncalled       are filtered records uncalled?
      * @param mergeInfoWithMaxAC        should we merge in info from the VC with maximum allele count?
      * @return new VariantContext       representing the merge of unsortedVCs
@@ -643,7 +642,6 @@ public final class GATKVariantContextUtils {
                                              final FilteredRecordMergeType filteredRecordMergeType,
                                              final GenotypeMergeType genotypeMergeOptions,
                                              final boolean annotateOrigin,
-                                             final String setKey,
                                              final boolean filteredAreUncalled,
                                              final boolean mergeInfoWithMaxAC) {
         int originalNumOfVCs = priorityListOfVCs == null ? 0 : priorityListOfVCs.size();
@@ -805,12 +803,6 @@ public final class GATKVariantContextUtils {
                 setValue = Utils.join("-", s);
             }
 
-            if ( setKey != null ) {
-                attributes.put(setKey, setValue);
-                if( mergeInfoWithMaxAC && vcWithMaxAC != null ) {
-                    attributesWithMaxAC.put(setKey, setValue);
-                }
-            }
         }
 
         if ( depth > 0 )
