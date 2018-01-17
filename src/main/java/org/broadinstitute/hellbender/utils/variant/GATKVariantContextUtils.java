@@ -632,26 +632,18 @@ public final class GATKVariantContextUtils {
      * @param priorityListOfVCs         priority list detailing the order in which we should grab the VCs
      * @param filteredRecordMergeType   merge type for filtered records
      * @param genotypeMergeOptions      merge option for genotypes
-     * @param filteredAreUncalled       are filtered records uncalled?
      * @return new VariantContext       representing the merge of unsortedVCs
      */
     public static VariantContext simpleMerge(final Collection<VariantContext> unsortedVCs,
                                              final List<String> priorityListOfVCs,
                                              final FilteredRecordMergeType filteredRecordMergeType,
-                                             final GenotypeMergeType genotypeMergeOptions,
-                                             final boolean filteredAreUncalled) {
+                                             final GenotypeMergeType genotypeMergeOptions) {
         int originalNumOfVCs = priorityListOfVCs == null ? 0 : priorityListOfVCs.size();
         if ( unsortedVCs == null || unsortedVCs.isEmpty() )
             return null;
 
-        final List<VariantContext> preFilteredVCs = sortVariantContextsByPriority(unsortedVCs, priorityListOfVCs, genotypeMergeOptions);
+        final List<VariantContext> VCs = sortVariantContextsByPriority(unsortedVCs, priorityListOfVCs, genotypeMergeOptions);
         // Make sure all variant contexts are padded with reference base in case of indels if necessary
-        List<VariantContext> VCs = preFilteredVCs.stream()
-                .filter(vc -> !filteredAreUncalled || vc.isNotFiltered())
-                .collect(Collectors.toList());
-
-        if ( VCs.isEmpty() ) // everything is filtered out and we're filteredAreUncalled
-            return null;
 
         // establish the baseline info from the first VC
         final VariantContext first = VCs.get(0);
