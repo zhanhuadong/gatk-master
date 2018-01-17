@@ -238,7 +238,7 @@ public class MafOutputRenderer extends OutputRenderer {
         printWriter.write(new SimpleDateFormat("yyyymmdd'T'hhmmss").format(new Date()).toString());
         for (final DataSourceFuncotationFactory funcotationFactory : dataSourceFactories) {
             printWriter.write(" | ");
-            printWriter.write(funcotationFactory.getType().toString());
+            printWriter.write(funcotationFactory.getName().toString());
             printWriter.write(" ");
             printWriter.write(funcotationFactory.getVersion());
         }
