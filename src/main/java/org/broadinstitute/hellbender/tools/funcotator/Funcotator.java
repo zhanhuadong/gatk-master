@@ -18,6 +18,7 @@ import org.broadinstitute.hellbender.tools.funcotator.dataSources.gencode.Gencod
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.gencode.GencodeFuncotationFactory;
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.xsv.LocatableXsvFuncotationFactory;
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.xsv.SimpleKeyXsvFuncotationFactory;
+import org.broadinstitute.hellbender.tools.funcotator.mafOutput.MafOutputRenderer;
 import org.broadinstitute.hellbender.tools.funcotator.vcfOutput.VcfOutputRenderer;
 import org.broadinstitute.hellbender.utils.codecs.gencode.GencodeGtfFeature;
 import org.broadinstitute.hellbender.utils.codecs.xsvLocatableTable.XsvTableFeature;
@@ -301,13 +302,22 @@ public class Funcotator extends VariantWalker {
         final LinkedHashMap<String, String> unaccountedForOverrideAnnotations = getUnaccountedForAnnotations( dataSourceFactories, annotationOverridesMap );
 
         // Set up our output renderer:
-        // TODO: in the future this should be encapsulated into a factory for output renderers based on an input argument.
-        outputRenderer = new VcfOutputRenderer(getHeaderForVariants(),
-                                               createVCFWriter(outputFile),
-                                               dataSourceFactories,
-                                               unaccountedForDefaultAnnotations,
-                                               unaccountedForOverrideAnnotations);
-
+        switch (outputFormatType) {
+            case MAF:
+                outputRenderer = new MafOutputRenderer(outputFile.toPath(),
+                        dataSourceFactories,
+                        unaccountedForDefaultAnnotations,
+                        unaccountedForOverrideAnnotations);
+                break;
+            // Default to VCF output:
+            default:
+                outputRenderer = new VcfOutputRenderer(getHeaderForVariants(),
+                        createVCFWriter(outputFile),
+                        dataSourceFactories,
+                        unaccountedForDefaultAnnotations,
+                        unaccountedForOverrideAnnotations);
+                break;
+        }
         outputRenderer.open();
     }
 
