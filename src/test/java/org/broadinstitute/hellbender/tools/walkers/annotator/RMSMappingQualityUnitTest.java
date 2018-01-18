@@ -188,10 +188,10 @@ public final class RMSMappingQualityUnitTest {
         final VariantContext vc= makeVC();
         final ReferenceContext referenceContext= null;
         final Map<String, Object> annotate = new AS_RMSMappingQuality().annotate(referenceContext, vc, likelihoods);
-        final String[] split =((String)annotate.get(GATKVCFConstants.AS_RAW_RMS_MAPPING_QUALITY_KEY)).split(AS_RMSMappingQuality.SPLIT_DELIM);
-        Assert.assertEquals(split.length, 2);
-        Assert.assertEquals(split[0], String.format("%.2f", 0.0));
-        Assert.assertEquals(split[1], String.format("%.2f", 0.0));
+        final List<String> split = Utils.split((String)annotate.get(GATKVCFConstants.AS_RAW_RMS_MAPPING_QUALITY_KEY), AS_RMSMappingQuality.SPLIT_DELIM);
+        Assert.assertEquals(split.size(), 2);
+        Assert.assertEquals(split.get(0), String.format("%.2f", 0.0));
+        Assert.assertEquals(split.get(1), String.format("%.2f", 0.0));
     }
 
     @Test
