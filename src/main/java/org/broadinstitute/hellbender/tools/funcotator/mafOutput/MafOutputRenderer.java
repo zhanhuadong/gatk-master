@@ -7,16 +7,14 @@ import org.broadinstitute.hellbender.tools.funcotator.Funcotation;
 import org.broadinstitute.hellbender.tools.funcotator.Funcotator;
 import org.broadinstitute.hellbender.tools.funcotator.OutputRenderer;
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.gencode.GencodeFuncotation;
+import org.broadinstitute.hellbender.utils.Utils;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -142,6 +140,12 @@ public class MafOutputRenderer extends OutputRenderer {
 
         //TODO: For this to work correctly you'll need to group funcotations by reference / alternate allele pairs.
 
+        // Make sure we only output the variant here if it passed all filters:
+        if ( variant.isFiltered() ) {
+            // We can ignore this variant since it was filtered out.
+            return;
+        }
+
         // First separate the funcotations into Gencode and Other:
         final List<GencodeFuncotation> gencodeFuncotations = new ArrayList<>(funcotations.size() / 2);
         final List<Funcotation> otherFuncotations = new ArrayList<>(funcotations.size() / 2);
@@ -163,37 +167,36 @@ public class MafOutputRenderer extends OutputRenderer {
 
         // Go through Gencode funcotations as they're the basis for each line:
         for ( final GencodeFuncotation gencodeFuncotation : gencodeFuncotations ) {
-            // TODO: If a funcotation is empty, DO NOT ADD IT!
-            outputMap.put("Hugo_Symbol", gencodeFuncotation.getHugoSymbol());
-            outputMap.put("NCBI_Build", gencodeFuncotation.getNcbiBuild());
-            outputMap.put("Chromosome", gencodeFuncotation.getChromosome());
-            outputMap.put("Start_Position", gencodeFuncotation.getStart());
-            outputMap.put("End_Position", gencodeFuncotation.getEnd());
-            outputMap.put("Strand", gencodeFuncotation.getTranscriptStrand());
-            outputMap.put("Transcript_Strand", gencodeFuncotation.getTranscriptStrand());
-            outputMap.put("VariantClassification", gencodeFuncotation.getVariantClassification());
-            outputMap.put("Variant_Type", gencodeFuncotation.getVariantType());
-            outputMap.put("Reference_Allele", gencodeFuncotation.getRefAllele());
-            outputMap.put("Tumor_Seq_Allele1", gencodeFuncotation.getTumorSeqAllele1());
-            outputMap.put("Tumor_Seq_Allele2", gencodeFuncotation.getTumorSeqAllele2());
-            outputMap.put("secondary_variant_classification", gencodeFuncotation.getSecondaryVariantClassification() );
-            outputMap.put("Genome_Change", gencodeFuncotation.getGenomeChange() );
-            outputMap.put("Annotation_Transcript", gencodeFuncotation.getAnnotationTranscript() );
-            outputMap.put("Transcript_Exon", gencodeFuncotation.getTranscriptExonNumber() );
-            outputMap.put("Transcript_Position", gencodeFuncotation.getTranscriptPos() );
-            outputMap.put("cDNA_Change", gencodeFuncotation.getcDnaChange() );
-            outputMap.put("Codon_Change", gencodeFuncotation.getCodonChange() );
-            outputMap.put("Protein_Change", gencodeFuncotation.getProteinChange() );
-            outputMap.put("gc_content", gencodeFuncotation.getGcContent() );
-            outputMap.put("ref_context", gencodeFuncotation.getReferenceContext() );
-            outputMap.put("Other_Transcripts", gencodeFuncotation.getOtherTranscripts() );
+            setField(outputMap, "Hugo_Symbol", gencodeFuncotation.getHugoSymbol());
+            setField(outputMap, "NCBI_Build", gencodeFuncotation.getNcbiBuild());
+            setField(outputMap, "Chromosome", gencodeFuncotation.getChromosome());
+            setField(outputMap, "Start_Position", gencodeFuncotation.getStart());
+            setField(outputMap, "End_Position", gencodeFuncotation.getEnd());
+            setField(outputMap, "Strand", gencodeFuncotation.getTranscriptStrand());
+            setField(outputMap, "Transcript_Strand", gencodeFuncotation.getTranscriptStrand());
+            setField(outputMap, "VariantClassification", gencodeFuncotation.getVariantClassification());
+            setField(outputMap, "Variant_Type", gencodeFuncotation.getVariantType());
+            setField(outputMap, "Reference_Allele", gencodeFuncotation.getRefAllele());
+            setField(outputMap, "Tumor_Seq_Allele1", gencodeFuncotation.getTumorSeqAllele1());
+            setField(outputMap, "Tumor_Seq_Allele2", gencodeFuncotation.getTumorSeqAllele2());
+            setField(outputMap, "secondary_variant_classification", gencodeFuncotation.getSecondaryVariantClassification() );
+            setField(outputMap, "Genome_Change", gencodeFuncotation.getGenomeChange() );
+            setField(outputMap, "Annotation_Transcript", gencodeFuncotation.getAnnotationTranscript() );
+            setField(outputMap, "Transcript_Exon", gencodeFuncotation.getTranscriptExonNumber() );
+            setField(outputMap, "Transcript_Position", gencodeFuncotation.getTranscriptPos() );
+            setField(outputMap, "cDNA_Change", gencodeFuncotation.getcDnaChange() );
+            setField(outputMap, "Codon_Change", gencodeFuncotation.getCodonChange() );
+            setField(outputMap, "Protein_Change", gencodeFuncotation.getProteinChange() );
+            setField(outputMap, "gc_content", gencodeFuncotation.getGcContent() );
+            setField(outputMap, "ref_context", gencodeFuncotation.getReferenceContext() );
+            setField(outputMap, "Other_Transcripts", gencodeFuncotation.getOtherTranscripts() );
         }
 
         // Grab data from other funcotations:
         for ( final Funcotation funcotation : otherFuncotations ) {
             //TODO: You'll need to match up each funcotation type with the known field names so that they're in the same columns each time!
             for ( final String field : funcotation.getFieldNames() ) {
-                outputMap.put(field, funcotation.getField(field));
+                setField(outputMap, field, funcotation.getField(field) );
             }
         }
 
@@ -201,7 +204,6 @@ public class MafOutputRenderer extends OutputRenderer {
         writeLine(
                 outputMap.entrySet().stream()
                         .map(e -> e.getValue())
-                        .map(e -> e == null ? UNKNOWN_VALUE_STRING : e)
                         .map(Object::toString)
                         .collect(Collectors.joining("\t"))
         );
@@ -214,6 +216,25 @@ public class MafOutputRenderer extends OutputRenderer {
 
     //==================================================================================================================
     // Instance Methods:
+
+    /**
+     * Set the field in the given {@code outputMap} specified by the given {@code key} to the given {@code value}.
+     * Will only set this field if the given {@code value} is not null and when evaluated as a {@link String} is not empty.
+     * @param outputMap {@link Map} of {@link String} to {@link Object} to hold output annotations.  Must not be {@code null}.
+     * @param key {@link String} key to add to the output map.  Must not be {@code null}.
+     * @param value {@link Object} value for the output map.
+     */
+    private void setField(final Map<String, Object> outputMap, final String key, final Object value) {
+        Utils.nonNull(outputMap);
+        Utils.nonNull(key);
+
+        if ( (value != null) && (!value.toString().isEmpty())) {
+            outputMap.put(key, value);
+        }
+        else {
+            outputMap.put(key, UNKNOWN_VALUE_STRING);
+        }
+    }
 
     /**
      * Write the given line to the {@link #printWriter}.
@@ -235,10 +256,10 @@ public class MafOutputRenderer extends OutputRenderer {
         printWriter.write(COMMENT_STRING);
         printWriter.write(COMMENT_STRING);
         printWriter.write(" Funcotator ");
-        printWriter.write(new SimpleDateFormat("yyyymmdd'T'hhmmss").format(new Date()).toString());
+        printWriter.write(new SimpleDateFormat("yyyymmdd'T'hhmmss").format(new Date()));
         for (final DataSourceFuncotationFactory funcotationFactory : dataSourceFactories) {
             printWriter.write(" | ");
-            printWriter.write(funcotationFactory.getName().toString());
+            printWriter.write(funcotationFactory.getName());
             printWriter.write(" ");
             printWriter.write(funcotationFactory.getVersion());
         }
@@ -288,8 +309,8 @@ public class MafOutputRenderer extends OutputRenderer {
         defaultMap.put("Sequencer",                                   UNKNOWN_VALUE_STRING );
         defaultMap.put("Tumor_Sample_UUID",                           UNKNOWN_VALUE_STRING );
         defaultMap.put("Matched_Norm_Sample_UUID",                    UNKNOWN_VALUE_STRING );
-        
-        // TCGA required "optional" fields:
+
+        // Required "optional" fields:
         defaultMap.put("Genome_Change",                               UNKNOWN_VALUE_STRING);
         defaultMap.put("Annotation_Transcript",                       UNKNOWN_VALUE_STRING);
         defaultMap.put("Transcript_Strand",                           UNKNOWN_VALUE_STRING);
@@ -312,7 +333,8 @@ public class MafOutputRenderer extends OutputRenderer {
         defaultMap.put("GO_Biological_Process",                       UNKNOWN_VALUE_STRING);
         defaultMap.put("GO_Cellular_Component",                       UNKNOWN_VALUE_STRING);
         defaultMap.put("GO_Molecular_Function",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("COSMIC_overlapping_mutations",                UNKNOWN_VALUE_STRING);
+        defaultMap.put("COSMIC_overlap",                              UNKNOWN_VALUE_STRING);
+        defaultMap.put("ping_mutations",                              UNKNOWN_VALUE_STRING);
         defaultMap.put("COSMIC_fusion_genes",                         UNKNOWN_VALUE_STRING);
         defaultMap.put("COSMIC_tissue_types_affected",                UNKNOWN_VALUE_STRING);
         defaultMap.put("COSMIC_total_alterations_in_gene",            UNKNOWN_VALUE_STRING);
@@ -335,197 +357,15 @@ public class MafOutputRenderer extends OutputRenderer {
         defaultMap.put("MUTSIG_Published_Results",                    UNKNOWN_VALUE_STRING);
         defaultMap.put("OREGANNO_ID",                                 UNKNOWN_VALUE_STRING);
         defaultMap.put("OREGANNO_Values",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AA",                               UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AC",                               UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AF",                               UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AFR_AF",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AMR_AF",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AN",                               UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_ASN_AF",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_AVGPOST",                          UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_CIEND",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_CIPOS",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_END",                              UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_ERATE",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_EUR_AF",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_HOMLEN",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_HOMSEQ",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_LDAF",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_RSQ",                              UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_SNPSOURCE",                        UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_SVLEN",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_SVTYPE",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_THETA",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("1000Genome_VT",                               UNKNOWN_VALUE_STRING);
-        defaultMap.put("ACHILLES_Lineage_Results_Top_Genes",          UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Cancer Germline Mut",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Cancer Molecular Genetics",               UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Cancer Somatic Mut",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Cancer Syndrome",                         UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Chr",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Chr Band",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_GeneID",                                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Name",                                    UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Other Germline Mut",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("CGC_Tissue Type",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("COSMIC_n_overlapping_mutations",              UNKNOWN_VALUE_STRING);
-        defaultMap.put("COSMIC_overlapping_mutation_descriptions",    UNKNOWN_VALUE_STRING);
-        defaultMap.put("COSMIC_overlapping_primary_sites",            UNKNOWN_VALUE_STRING);
-        defaultMap.put("ClinVar_ASSEMBLY",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("ClinVar_HGMD_ID",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("ClinVar_SYM",                                 UNKNOWN_VALUE_STRING);
-        defaultMap.put("ClinVar_TYPE",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("ClinVar_rs",                                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AA",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AAC",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AA_AC",                                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AA_AGE",                                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AA_GTC",                                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AvgAAsampleReadDepth",                    UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AvgEAsampleReadDepth",                    UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_AvgSampleReadDepth",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_CA",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_CDP",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_CG",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_CP",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_Chromosome",                              UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_DBSNP",                                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_DP",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_EA_AC",                                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_EA_AGE",                                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_EA_GTC",                                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_EXOME_CHIP",                              UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_FG",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_GL",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_GM",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_GS",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_GTC",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_GTS",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_GWAS_PUBMED",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_MAF",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_PH",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_PP",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_Position",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_TAC",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_TotalAAsamplesCovered",                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_TotalEAsamplesCovered",                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("ESP_TotalSamplesCovered",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("Ensembl_so_accession",                        UNKNOWN_VALUE_STRING);
-        defaultMap.put("Ensembl_so_term",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("Familial_Cancer_Genes_Reference",             UNKNOWN_VALUE_STRING);
-        defaultMap.put("Familial_Cancer_Genes_Synonym",               UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGNC_Ensembl Gene ID",                        UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGNC_HGNC ID",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGNC_RefSeq IDs",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGNC_Status",                                 UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGNC_UCSC ID(supplied by UCSC)",              UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGVS_coding_DNA_change",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGVS_genomic_change",                         UNKNOWN_VALUE_STRING);
-        defaultMap.put("HGVS_protein_change",                         UNKNOWN_VALUE_STRING);
-        defaultMap.put("ORegAnno_bin",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("UniProt_alt_uniprot_accessions",              UNKNOWN_VALUE_STRING);
-        defaultMap.put("build",                                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("ccds_id",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_AC",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_AF",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_AFR_AC",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_AFR_AF",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_AMR_AC",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_AMR_AF",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_ASN_AC",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_ASN_AF",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_EUR_AC",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_1000Gp1_EUR_AF",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Ancestral_allele",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_CADD_phred",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_CADD_raw",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_CADD_raw_rankscore",                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_ESP6500_AA_AF",                        UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_ESP6500_EA_AF",                        UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Ensembl_geneid",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Ensembl_transcriptid",                 UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_FATHMM_pred",                          UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_FATHMM_rankscore",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_FATHMM_score",                         UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_GERP++_NR",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_GERP++_RS",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_GERP++_RS_rankscore",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Interpro_domain",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LRT_Omega",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LRT_converted_rankscore",              UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LRT_pred",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LRT_score",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LR_pred",                              UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LR_rankscore",                         UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_LR_score",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_MutationAssessor_pred",                UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_MutationAssessor_rankscore",           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_MutationAssessor_score",               UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_MutationTaster_converted_rankscore",   UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_MutationTaster_pred",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_MutationTaster_score",                 UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Polyphen2_HDIV_pred",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Polyphen2_HDIV_rankscore",             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Polyphen2_HDIV_score",                 UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Polyphen2_HVAR_pred",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Polyphen2_HVAR_rankscore",             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Polyphen2_HVAR_score",                 UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_RadialSVM_pred",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_RadialSVM_rankscore",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_RadialSVM_score",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Reliability_index",                    UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SIFT_converted_rankscore",             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SIFT_pred",                            UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SIFT_score",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SLR_test_statistic",                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SiPhy_29way_logOdds",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SiPhy_29way_logOdds_rankscore",        UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_SiPhy_29way_pi",                       UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_UniSNP_ids",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Uniprot_aapos",                        UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Uniprot_acc",                          UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_Uniprot_id",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_aaalt",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_aapos",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_aapos_FATHMM",                         UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_aapos_SIFT",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_aaref",                                UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_cds_strand",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_codonpos",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_fold-degenerate",                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_genename",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_hg18_pos(1-coor)",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phastCons100way_vertebrate",           UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phastCons100way_vertebrate_rankscore", UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phastCons46way_placental",             UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phastCons46way_placental_rankscore",   UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phastCons46way_primate",               UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phastCons46way_primate_rankscore",     UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phyloP100way_vertebrate",              UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phyloP100way_vertebrate_rankscore",    UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phyloP46way_placental",                UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phyloP46way_placental_rankscore",      UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phyloP46way_primate",                  UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_phyloP46way_primate_rankscore",        UNKNOWN_VALUE_STRING);
-        defaultMap.put("dbNSFP_refcodon",                             UNKNOWN_VALUE_STRING);
-        defaultMap.put("gencode_transcript_name",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("gencode_transcript_status",                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("gencode_transcript_tags",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("gencode_transcript_type",                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("gene_id",                                     UNKNOWN_VALUE_STRING);
-        defaultMap.put("gene_type",                                   UNKNOWN_VALUE_STRING);
-        defaultMap.put("havana_transcript",                           UNKNOWN_VALUE_STRING);
-        defaultMap.put("secondary_variant_classification",            UNKNOWN_VALUE_STRING);
-        defaultMap.put("strand",                                      UNKNOWN_VALUE_STRING);
-        defaultMap.put("transcript_id",                               UNKNOWN_VALUE_STRING);
     }
 
     //==================================================================================================================
     // Helper Data Types:
 
     //------------------------------------------------------------------------------------------------------------------
-    // Required Columns:
-
+    // Columns:
+    
+// Required:
 // 1	Hugo_Symbol
 // 2	Entrez_Gene_Id
 // 3	Center
@@ -560,5 +400,53 @@ public class MafOutputRenderer extends OutputRenderer {
 //32	Sequencer
 //33    Tumor_Sample_UUID
 //34    Matched_Norm_Sample_UUID
+
+// "Optional" Required:
+//35    Genome_Change
+//36    Annotation_Transcript
+//37    Transcript_Strand
+//38    Transcript_Exon
+//39    Transcript_Position
+//40    cDNA_Change
+//41    Codon_Change
+//42    Protein_Change
+//43    Other_Transcripts
+//44    Refseq_mRNA_Id
+//45    Refseq_prot_Id
+//46    SwissProt_acc_Id
+//47    SwissProt_entry_Id
+//48    Description
+//49    UniProt_AApos
+//50    UniProt_Region
+//51    UniProt_Site
+//52    UniProt_Natural_Variations
+//53    UniProt_Experimental_Info
+//54    GO_Biological_Process
+//55    GO_Cellular_Component
+//56    GO_Molecular_Function
+//57    COSMIC_overlap
+//58    ping_mutations
+//59    COSMIC_fusion_genes
+//60    COSMIC_tissue_types_affected
+//61    COSMIC_total_alterations_in_gene
+//62    Tumorscape_Amplification_Peaks
+//63    Tumorscape_Deletion_Peaks
+//64    TCGAscape_Amplification_Peaks
+//65    TCGAscape_Deletion_Peaks
+//66    DrugBank
+//67    ref_context
+//68    gc_content
+//69    CCLE_ONCOMAP_overlapping_mutations
+//70    CCLE_ONCOMAP_total_mutations_in_gene
+//71    CGC_Mutation_Type
+//72    CGC_Translocation_Partner
+//73    CGC_Tumor_Types_Somatic
+//74    CGC_Tumor_Types_Germline
+//75    CGC_Other_Diseases
+//76    DNARepairGenes_Role
+//77    FamilialCancerDatabase_Syndromes
+//78    MUTSIG_Published_Results
+//79    OREGANNO_ID
+//80    OREGANNO_Values
 
 }
