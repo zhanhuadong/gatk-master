@@ -107,24 +107,24 @@ class SampleDenoisingAndCallingPosteriorsExporter:
         self.output_path = output_path
 
     @staticmethod
-    def _export_sample_copy_number_log_posterior(sample_posterior_path: str,
-                                                 log_q_c_tc: np.ndarray,
-                                                 delimiter='\t',
-                                                 comment='@',
-                                                 extra_comment_lines: Optional[List[str]] = None):
-        assert isinstance(log_q_c_tc, np.ndarray)
-        assert log_q_c_tc.ndim == 2
-        num_copy_number_states = log_q_c_tc.shape[1]
+    def _export_ndarray_tc_with_copy_number_header(sample_posterior_path: str,
+                                                   ndarray_tc: np.ndarray,
+                                                   output_file_name: str,
+                                                   delimiter='\t',
+                                                   comment='@',
+                                                   extra_comment_lines: Optional[List[str]] = None):
+        assert isinstance(ndarray_tc, np.ndarray)
+        assert ndarray_tc.ndim == 2
+        num_copy_number_states = ndarray_tc.shape[1]
         copy_number_header_columns = [io_consts.copy_number_column_prefix + str(cn)
                                       for cn in range(num_copy_number_states)]
-        with open(os.path.join(sample_posterior_path,
-                               io_consts.default_copy_number_log_posterior_tsv_filename), 'w') as f:
+        with open(os.path.join(sample_posterior_path, output_file_name), 'w') as f:
             if extra_comment_lines is not None:
                 for comment_line in extra_comment_lines:
                     f.write(comment + comment_line + '\n')
             f.write(delimiter.join(copy_number_header_columns) + '\n')
-            for ti in range(log_q_c_tc.shape[0]):
-                f.write(delimiter.join([repr(x) for x in log_q_c_tc[ti, :]]) + '\n')
+            for ti in range(ndarray_tc.shape[0]):
+                f.write(delimiter.join([repr(x) for x in ndarray_tc[ti, :]]) + '\n')
 
     @staticmethod
     def _export_sample_name(sample_posterior_path: str,
@@ -151,10 +151,18 @@ class SampleDenoisingAndCallingPosteriorsExporter:
             # export sample name
             self._export_sample_name(sample_posterior_path, sample_name)
 
-            # export copy number posterior
-            self._export_sample_copy_number_log_posterior(
+            # export copy number log posterior
+            self._export_ndarray_tc_with_copy_number_header(
                 sample_posterior_path,
                 self.denoising_calling_workspace.log_q_c_stc.get_value(borrow=True)[si, ...],
+                io_consts.default_copy_number_log_posterior_tsv_filename,
+                extra_comment_lines=sample_name_comment_line)
+
+            # export copy number log emission
+            self._export_ndarray_tc_with_copy_number_header(
+                sample_posterior_path,
+                self.denoising_calling_workspace.log_copy_number_emission_stc.get_value(borrow=True)[si, ...],
+                io_consts.default_copy_number_log_emission_tsv_filename,
                 extra_comment_lines=sample_name_comment_line)
 
 

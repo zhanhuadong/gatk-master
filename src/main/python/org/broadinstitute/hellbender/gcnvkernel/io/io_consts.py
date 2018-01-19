@@ -32,6 +32,7 @@ default_sample_read_depth_tsv_filename = 'global_read_depth.tsv'
 default_sample_name_txt_filename = 'sample_name.txt'
 default_sample_contig_ploidy_tsv_filename = 'contig_ploidy.tsv'
 default_copy_number_log_posterior_tsv_filename = "log_q_c_tc.tsv"
+default_copy_number_log_emission_tsv_filename = "log_c_emission_tc.tsv"
 default_class_log_posterior_tsv_filename = "log_q_tau_tk.tsv"
 
 default_denoising_config_json_filename = "denoising_config.json"
