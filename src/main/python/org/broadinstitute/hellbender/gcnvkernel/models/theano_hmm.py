@@ -170,7 +170,6 @@ class TheanoForwardBackward:
                 return p_beta_vec
 
         # calculate thermal equivalent of various quantities
-        # todo are normalizations (i.e. logsumexp subtraction) necessary?
         inv_temperature = tt.inv(temperature)
         thermal_log_prior_c = inv_temperature * log_prior_c
         thermal_log_prior_c -= pm.math.logsumexp(thermal_log_prior_c)
@@ -209,3 +208,21 @@ class TheanoForwardBackward:
         log_posterior_t = log_unnormalized_posterior_t - log_data_likelihood_t
 
         return log_posterior_t, log_data_likelihood_t.dimshuffle(0), alpha_t, beta_t
+
+    @staticmethod
+    def _get_symbolic_log_viterbi_chain(num_states: tt.iscalar,
+                                        temperature: tt.scalar,
+                                        log_prior_c: types.TheanoVector,
+                                        log_trans_tcc: types.TheanoTensor3,
+                                        log_emission_tc: types.TheanoMatrix,
+                                        resolve_nans: bool):
+        inv_temperature = tt.inv(temperature)
+        thermal_log_prior_c = inv_temperature * log_prior_c
+        thermal_log_prior_c -= pm.math.logsumexp(thermal_log_prior_c)
+        thermal_log_trans_tcc = inv_temperature * log_trans_tcc
+        thermal_log_trans_tcc -= pm.math.logsumexp(thermal_log_trans_tcc, axis=-1)
+        thermal_log_emission_tc = inv_temperature * log_emission_tc
+
+        # todo
+
+        pass
