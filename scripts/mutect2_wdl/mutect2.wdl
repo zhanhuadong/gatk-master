@@ -20,6 +20,7 @@
 ## scatter_count: number of parallel jobs to generate when scattering over intervals
 ## artifact_modes: types of artifacts to consider in the orientation bias filter
 ## m2_extra_args, m2_extra_filtering_args: additional arguments for Mutect2 calling and filtering (optional)
+## split_intervals_extra_args: additional arguments for interval splitting (optional)
 ## is_run_orientation_bias_filter: if true, run the orientation bias filter post-processing step
 ## is_run_oncotator: if true, annotate the M2 VCFs using oncotator (to produce a TCGA MAF).  Important:  This requires a
 ##                   docker image and should  not be run in environments where docker is unavailable (e.g. SGE cluster on
@@ -76,6 +77,7 @@ workflow Mutect2 {
     File? tumor_sequencing_artifact_metrics
     String? m2_extra_args
     String? m2_extra_filtering_args
+    String? split_intervals_extra_args
     Boolean is_bamOut = false
 
     # oncotator inputs
@@ -126,6 +128,7 @@ workflow Mutect2 {
             ref_fasta = ref_fasta,
             ref_fai = ref_fai,
             ref_dict = ref_dict,
+            split_intervals_extra_args = split_intervals_extra_args,
             scatter_count = scatter_count,
             gatk_override = gatk_override,
             gatk_docker = gatk_docker,
@@ -299,6 +302,7 @@ task SplitIntervals {
     File ref_fasta
     File ref_fai
     File ref_dict
+    String? split_intervals_extra_args
     Int scatter_count
 
     File? gatk_override
@@ -321,7 +325,13 @@ task SplitIntervals {
         export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk_override}
 
         mkdir interval-files
-        gatk --java-options "-Xmx${command_mem}m" SplitIntervals -R ${ref_fasta} ${"-L " + intervals} -scatter ${scatter_count} -O interval-files
+        gatk --java-options "-Xmx${command_mem}m" SplitIntervals \
+            -R ${ref_fasta} \
+            ${"-L " + intervals} \
+            -scatter ${scatter_count} \
+            -O interval-files \
+            ${split_intervals_extra_args}
+            
         cp interval-files/*.intervals .
     }
 
