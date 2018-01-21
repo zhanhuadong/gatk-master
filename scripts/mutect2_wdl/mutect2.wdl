@@ -331,7 +331,7 @@ task SplitIntervals {
             -scatter ${scatter_count} \
             -O interval-files \
             ${split_intervals_extra_args}
-            
+
         cp interval-files/*.intervals .
     }
 
