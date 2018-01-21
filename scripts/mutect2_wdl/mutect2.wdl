@@ -89,6 +89,16 @@ workflow Mutect2 {
     String? sequence_source
     File? default_config_file
 
+    # funcotator inputs
+    Boolean? is_run_funcotator
+    Boolean run_funcotator = select_first([is_run_funcotator, false])
+    String? reference_version
+    String? data_sources_tar_gz
+    String? transcript_selection_mode
+    Array[String]? transcript_selection_list
+    Array[String]? annotation_defaults
+    Array[String]? annotation_overrides
+
     File? gatk_override
 
     # runtime
@@ -284,6 +294,26 @@ workflow Mutect2 {
         }
     }
 
+    if (run_funcotator) {
+        File funcotate_vcf_input = select_first([FilterByOrientationBias.filtered_vcf, Filter.filtered_vcf])
+        call Funcotate {
+            input:
+                ref_fasta = ref_fasta,
+                ref_fai = ref_fai,
+                ref_dict = ref_dict,
+                input_vcf = funcotate_vcf_input,
+                reference_version = select_first([reference_version, "UNKNOWN"]),
+                data_sources_tar_gz = data_sources_tar_gz,
+                transcript_selection_mode = transcript_selection_mode,
+                transcript_selection_list = transcript_selection_list,
+                annotation_defaults = annotation_defaults,
+                annotation_overrides = annotation_overrides,
+                preemptible_attempts = preemptible_attempts,
+                gatk_override = gatk_override,
+                gatk_docker = gatk_docker
+        }
+    }
+
     output {
         File unfiltered_vcf = MergeVCFs.output_vcf
         File unfiltered_vcf_index = MergeVCFs.output_vcf_index
@@ -296,6 +326,8 @@ workflow Mutect2 {
         File? preadapter_detail_metrics = select_first([CollectSequencingArtifactMetrics.pre_adapter_metrics, "null"])
         File? bamout = select_first([MergeBamOuts.merged_bam_out, "null"])
         File? bamout_index = select_first([MergeBamOuts.merged_bam_out_index, "null"])
+        File? funcotated_vcf = Funcotate.funcotated_vcf
+        File? funcotated_vcf_idx = Funcotate.funcotated_vcf_idx
     }
 }
 
@@ -800,6 +832,92 @@ task oncotate_m2 {
     output {
         File oncotated_m2_maf="${case_id}.maf.annotated"
     }
+}
+
+task Funcotate {
+    # inputs
+    File ref_fasta
+    File ref_fai
+    File ref_dict
+    File input_vcf
+    String output_vcf_name = basename(input_vcf, ".vcf") + "-funcotated.vcf"
+    String reference_version
+
+    File? data_sources_tar_gz
+    String? transcript_selection_mode
+    Array[String]? transcript_selection_list
+    Array[String]? annotation_defaults
+    Array[String]? annotation_overrides
+
+    # ==============
+    # Process input args:
+    String transcript_selection_arg = if defined(transcript_selection_list) then " --transcript-list " else ""
+    String annotation_def_arg = if defined(annotation_defaults) then " --annotation-default " else ""
+    String annotation_over_arg = if defined(annotation_overrides) then " --annotation-override " else ""
+
+    # runtime
+    String gatk_docker
+
+    File? gatk_override
+    Int? mem
+    Int? preemptible_attempts
+    Int? disk_space
+    Int? cpu
+
+    Boolean use_ssd = false
+
+
+    # WARNING: In the workflow, you should calculate the disk space as an input to this task (disk_space).  Please see [TODO: Link from Jose] for examples.
+    Int default_disk_space = 100
+
+    # Mem is in units of GB but our command and memory runtime values are in MB
+    Int machine_mem = if defined(mem) then mem * 1000 else 3000
+    Int command_mem = machine_mem - 1000
+
+    command <<<
+        set -e
+        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk_override}
+
+        DATA_SOURCES_TAR_GZ=${data_sources_tar_gz}
+        if [[ ! -e $DATA_SOURCES_TAR_GZ ]] ; then
+            # We have to download the data sources:
+            echo "Data sources gzip does not exist: $DATA_SOURCES_TAR_GZ"
+            echo "Downloading default data sources..."
+            wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/funcotator/funcotator_dataSources.v1.0.20180105.tar.gz
+            tar -zxf funcotator_dataSources.v1.0.20180105.tar.gz
+            DATA_SOURCES_FOLDER=funcotator_dataSources.v1.0.20180105
+        else
+            # Extract the tar.gz:
+            mkdir datasources_dir
+            tar zxvf ${data_sources_tar_gz} -C datasources_dir --strip-components 1
+            DATA_SOURCES_FOLDER="$PWD/datasources_dir"
+        fi
+
+        gatk --java-options "-Xmx${command_mem}m" Funcotator \
+            --data-sources-path $DATA_SOURCES_FOLDER \
+            --ref-version ${reference_version} \
+            -R ${ref_fasta} \
+            -V ${input_vcf} \
+            -O ${output_vcf_name} \
+            ${"--transcript-selection-mode " + transcript_selection_mode} \
+            ${transcript_selection_arg}${default="" sep=" --transcript-list " transcript_selection_list} \
+            ${annotation_def_arg}${default="" sep=" --annotation-default " annotation_defaults} \
+            ${annotation_over_arg}${default="" sep=" --annotation-override " annotation_overrides}
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: machine_mem + " MB"
+        # Note that the space before SSD and HDD should be included.
+        disks: "local-disk " + select_first([disk_space, default_disk_space]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_attempts, 3])
+        cpu: select_first([cpu, 1])
+    }
+
+  output {
+    File funcotated_vcf = "${output_vcf_name}"
+    File funcotated_vcf_idx = "${output_vcf_name}.idx"
+  }
 }
 
 # Calculates sum of a list of floats
