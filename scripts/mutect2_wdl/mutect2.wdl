@@ -72,7 +72,8 @@ workflow Mutect2 {
     File? gnomad_index
     File? variants_for_contamination
     File? variants_for_contamination_index
-    Boolean is_run_orientation_bias_filter
+    Boolean? is_run_orientation_bias_filter
+    Boolean run_orientation_bias_filter = select_first([is_run_orientation_bias_filter, false])
     Array[String] artifact_modes
     File? tumor_sequencing_artifact_metrics
     String? m2_extra_args
@@ -82,7 +83,8 @@ workflow Mutect2 {
     Boolean make_bamout = select_first([is_bamOut, false])
 
     # oncotator inputs
-    Boolean is_run_oncotator
+    Boolean? is_run_oncotator
+    Boolean run_oncotator = select_first([is_run_oncotator, false])
     File? onco_ds_tar_gz
     String? onco_ds_local_db_dir
     String? sequencing_center
@@ -213,7 +215,7 @@ workflow Mutect2 {
         }
     }
 
-    if (is_run_orientation_bias_filter && !defined(tumor_sequencing_artifact_metrics)) {
+    if (run_orientation_bias_filter && !defined(tumor_sequencing_artifact_metrics)) {
         call CollectSequencingArtifactMetrics {
             input:
                 gatk_docker = gatk_docker,
@@ -258,7 +260,7 @@ workflow Mutect2 {
             auth = auth
     }
 
-    if (is_run_orientation_bias_filter) {
+    if (run_orientation_bias_filter) {
         # Get the metrics either from the workflow input or CollectSequencingArtifactMetrics if no workflow input is provided
         File input_artifact_metrics = select_first([tumor_sequencing_artifact_metrics, CollectSequencingArtifactMetrics.pre_adapter_metrics])
 
@@ -276,7 +278,7 @@ workflow Mutect2 {
     }
 
 
-    if (is_run_oncotator) {
+    if (run_oncotator) {
         File oncotate_vcf_input = select_first([FilterByOrientationBias.filtered_vcf, Filter.filtered_vcf])
         call oncotate_m2 {
             input:
