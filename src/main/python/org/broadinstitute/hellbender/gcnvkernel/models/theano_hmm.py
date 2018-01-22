@@ -10,8 +10,8 @@ from . import commons
 class TheanoForwardBackward:
     """Implementation of the forward-backward algorithm using `theano.scan`."""
     def __init__(self,
-                 log_posterior_output: Optional[types.TensorSharedVariable],
-                 admixing_rate: float,
+                 log_posterior_output: Optional[types.TensorSharedVariable] = None,
+                 admixing_rate: float = 1.0,
                  include_alpha_beta_output: bool = False,
                  resolve_nans: bool = False):
         """Initializer.
@@ -55,7 +55,6 @@ class TheanoForwardBackward:
         return self._forward_backward_theano_func(
             num_states, temperature, log_prior_c, log_trans_tcc, log_emission_tc, prev_log_posterior_tc)
 
-    # todo update docstring
     @th.configparser.change_flags(compute_test_value="ignore")
     def _get_compiled_forward_backward_theano_func(self):
         """Returns a compiled theano function that perform forward-backward and either updates log posterior
@@ -70,7 +69,6 @@ class TheanoForwardBackward:
                 og_trans_tcc (float tensor3),
                 log_emission_tc (float matrix)
                 prev_log_posterior_tc (float matrix)
-
 
             If a `log_posterior_output` shared tensor is given to the class initializer,
             the return tuple will be:
@@ -209,13 +207,65 @@ class TheanoForwardBackward:
 
         return log_posterior_t, log_data_likelihood_t.dimshuffle(0), alpha_t, beta_t
 
+
+class TheanoViterbi:
+    """Implementation of Viterbi algorithm using `theano.scan`."""
+    def __init__(self):
+        self._viterbi_theano_func = self._get_compiled_viterbi_theano_func()
+
+    @th.configparser.change_flags(compute_test_value="ignore")
+    def _get_compiled_viterbi_theano_func(self):
+        """todo.
+
+        Args:
+
+        Returns:
+        """
+        temperature = tt.scalar('temperature')
+        log_prior_c = tt.vector('log_prior_c')
+        log_trans_tcc = tt.tensor3('log_trans_tcc')
+        log_emission_tc = tt.matrix('log_emission_tc')
+
+        inputs = [temperature, log_prior_c, log_trans_tcc, log_emission_tc]
+        psi_tc = self._get_symbolic_log_viterbi_chain(
+            temperature, log_prior_c, log_trans_tcc, log_emission_tc)
+
+        return th.function(inputs=inputs, outputs=[psi_tc])
+
     @staticmethod
-    def _get_symbolic_log_viterbi_chain(num_states: tt.iscalar,
-                                        temperature: tt.scalar,
+    def _get_symbolic_log_viterbi_chain(temperature: tt.scalar,
                                         log_prior_c: types.TheanoVector,
                                         log_trans_tcc: types.TheanoTensor3,
-                                        log_emission_tc: types.TheanoMatrix,
-                                        resolve_nans: bool):
+                                        log_emission_tc: types.TheanoMatrix):
+        """Generates a symbolic 1d integer tensor representing the most likely chain of hidden states
+        (Viterbi algorithm).
+
+        Returns:
+            symbolic 1d integer tensor representing the most likely chain of hidden states
+        """
+
+        def calculate_next_omega_psi(p_log_trans_ab, c_log_emission_b, p_omega_a):
+            """Calculates the updated data log likelihood and the next best state by taking into the
+            next link in the Markov chain.
+
+            Args:
+                p_log_trans_ab: log transition matrix from `a` to `b`
+                c_log_emission_b: log emission probabilities at the current position
+                p_omega_a: previous data log likelihood assuming the last state is `a`
+
+            Returns:
+                updated data log likelihood for all possible terminal states,
+                previous best state conditioned on each of the states for the current position
+            """
+            tau_ab = p_log_trans_ab + p_omega_a.dimshuffle(0, 'x')
+            max_tau_b, best_state_b = tt.max_and_argmax(tau_ab, axis=0)
+            n_omega_b = c_log_emission_b + max_tau_b
+            return n_omega_b, best_state_b
+
+        def calculate_previous_best_state(c_psi_c, n_best_state):
+            return c_psi_c[n_best_state]
+
+        # calculate thermal equivalent of various quantities
         inv_temperature = tt.inv(temperature)
         thermal_log_prior_c = inv_temperature * log_prior_c
         thermal_log_prior_c -= pm.math.logsumexp(thermal_log_prior_c)
@@ -223,6 +273,22 @@ class TheanoForwardBackward:
         thermal_log_trans_tcc -= pm.math.logsumexp(thermal_log_trans_tcc, axis=-1)
         thermal_log_emission_tc = inv_temperature * log_emission_tc
 
-        # todo
+        # state log likelihood for the first position
+        omega_first_a = thermal_log_emission_tc[0, :] + thermal_log_prior_c
 
-        pass
+        omega_psi_list, _ = th.scan(
+            fn=calculate_next_omega_psi,
+            sequences=[thermal_log_trans_tcc, thermal_log_emission_tc[1:, :]],
+            outputs_info=[omega_first_a, None])
+        omega_tc = omega_psi_list[0]
+        psi_tc = omega_psi_list[1]
+
+        # assemble the Viterbi chain
+        last_best_state = tt.argmax(omega_tc[-1, :])
+        viterbi_path_except_for_last_t, _ = th.scan(
+            fn=calculate_previous_best_state,
+            sequences=[psi_tc],
+            outputs_info=[last_best_state],
+            go_backwards=True)
+
+        return tt.concatenate([tt.stack(last_best_state), viterbi_path_except_for_last_t])[::-1]
