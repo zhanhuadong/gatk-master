@@ -262,8 +262,18 @@ class TheanoViterbi:
             n_omega_b = c_log_emission_b + max_tau_b
             return n_omega_b, best_state_b
 
-        def calculate_previous_best_state(c_psi_c, n_best_state):
-            return c_psi_c[n_best_state]
+        def calculate_previous_best_state(c_psi_c, c_best_state):
+            """Calculates the previous best state (trivially) from the current best state and
+            the Viterbi table (psi).
+
+            Args:
+                c_psi_c: Viterbi table (previous best state conditioned on the current best state)
+                c_best_state: best state in the current position
+
+            Returns:
+                previous best state
+            """
+            return c_psi_c[c_best_state]
 
         # calculate thermal equivalent of various quantities
         inv_temperature = tt.inv(temperature)
@@ -276,6 +286,7 @@ class TheanoViterbi:
         # state log likelihood for the first position
         omega_first_a = thermal_log_emission_tc[0, :] + thermal_log_prior_c
 
+        # calculate the the log likelihood of partial Viterbi paths (omega_tc) and the Viterbi table (psi_tc)
         omega_psi_list, _ = th.scan(
             fn=calculate_next_omega_psi,
             sequences=[thermal_log_trans_tcc, thermal_log_emission_tc[1:, :]],
@@ -283,7 +294,7 @@ class TheanoViterbi:
         omega_tc = omega_psi_list[0]
         psi_tc = omega_psi_list[1]
 
-        # assemble the Viterbi chain
+        # obtain the Viterbi chain from omega_tc and psi_tc
         last_best_state = tt.argmax(omega_tc[-1, :])
         viterbi_path_except_for_last_t, _ = th.scan(
             fn=calculate_previous_best_state,
@@ -291,4 +302,8 @@ class TheanoViterbi:
             outputs_info=[last_best_state],
             go_backwards=True)
 
-        return tt.concatenate([tt.stack(last_best_state), viterbi_path_except_for_last_t])[::-1]
+        viterbi_path_full_t = tt.concatenate(
+            [tt.stack(last_best_state),
+             viterbi_path_except_for_last_t])[::-1]
+
+        return viterbi_path_full_t
