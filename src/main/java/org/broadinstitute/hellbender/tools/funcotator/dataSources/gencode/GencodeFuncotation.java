@@ -188,58 +188,63 @@ public class GencodeFuncotation implements Funcotation {
     @Override
     public void setFieldSerializationOverrideValue( final String fieldName, final String overrideValue ) {
         switch (fieldName) {
-            case "Gencode_hugoSymbol": hugoSymbolSerializedOverride = overrideValue; break;
-            case "Gencode_ncbiBuild": ncbiBuildSerializedOverride = overrideValue; break;
-            case "Gencode_chromosome": chromosomeSerializedOverride = overrideValue; break;
-            case "Gencode_start": startSerializedOverride = overrideValue; break;
-            case "Gencode_end": endSerializedOverride = overrideValue; break;
-            case "Gencode_variantClassification": variantClassificationSerializedOverride = overrideValue; break;
-            case "Gencode_secondaryVariantClassification": secondaryVariantClassificationSerializedOverride = overrideValue; break;
-            case "Gencode_variantType": variantTypeSerializedOverride = overrideValue; break;
-            case "Gencode_refAllele": refAlleleSerializedOverride = overrideValue; break;
-            case "Gencode_tumorSeqAllele1": tumorSeqAllele1SerializedOverride = overrideValue; break;
-            case "Gencode_tumorSeqAllele2": tumorSeqAllele2SerializedOverride = overrideValue; break;
-            case "Gencode_genomeChange": genomeChangeSerializedOverride = overrideValue; break;
-            case "Gencode_annotationTranscript": annotationTranscriptSerializedOverride = overrideValue; break;
-            case "Gencode_transcriptStrand": transcriptStrandSerializedOverride = overrideValue; break;
-            case "Gencode_transcriptExon": transcriptExonSerializedOverride = overrideValue; break;
-            case "Gencode_transcriptPos": transcriptPosSerializedOverride = overrideValue; break;
-            case "Gencode_cDnaChange": cDnaChangeSerializedOverride = overrideValue; break;
-            case "Gencode_codonChange": codonChangeSerializedOverride = overrideValue; break;
-            case "Gencode_proteinChange": proteinChangeSerializedOverride = overrideValue; break;
-            case "Gencode_gcContent": gcContentSerializedOverride = overrideValue; break;
-            case "Gencode_referenceContext": referenceContextSerializedOverride = overrideValue; break;
-            case "Gencode_otherTranscripts": otherTranscriptsSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_hugoSymbol": hugoSymbolSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_ncbiBuild": ncbiBuildSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_chromosome": chromosomeSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_start": startSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_end": endSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_variantClassification": variantClassificationSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_secondaryVariantClassification": secondaryVariantClassificationSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_variantType": variantTypeSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_refAllele": refAlleleSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_tumorSeqAllele1": tumorSeqAllele1SerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_tumorSeqAllele2": tumorSeqAllele2SerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_genomeChange": genomeChangeSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_annotationTranscript": annotationTranscriptSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_transcriptStrand": transcriptStrandSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_transcriptExon": transcriptExonSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_transcriptPos": transcriptPosSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_cDnaChange": cDnaChangeSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_codonChange": codonChangeSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_proteinChange": proteinChangeSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_gcContent": gcContentSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_referenceContext": referenceContextSerializedOverride = overrideValue; break;
+            case GencodeFuncotationFactory.DATA_SOURCE_NAME + "_otherTranscripts": otherTranscriptsSerializedOverride = overrideValue; break;
             default: throw new UserException("Attempted to override invalid field in this GencodeFuncotation: " + fieldName + " (value was: " + overrideValue + ")");
         }
+    }
+
+    @Override
+    public String getDataSourceName() {
+        return GencodeFuncotationFactory.DATA_SOURCE_NAME;
     }
 
     @Override
     public LinkedHashSet<String> getFieldNames() {
         return new LinkedHashSet<>(
                 Arrays.asList(
-                        "Gencode_hugoSymbol",
-                        "Gencode_ncbiBuild",
-                        "Gencode_chromosome",
-                        "Gencode_start",
-                        "Gencode_end",
-                        "Gencode_variantClassification",
-                        "Gencode_secondaryVariantClassification",
-                        "Gencode_variantType",
-                        "Gencode_refAllele",
-                        "Gencode_tumorSeqAllele1",
-                        "Gencode_tumorSeqAllele2",
-                        "Gencode_genomeChange",
-                        "Gencode_annotationTranscript",
-                        "Gencode_transcriptStrand",
-                        "Gencode_transcriptExon",
-                        "Gencode_transcriptPos",
-                        "Gencode_cDnaChange",
-                        "Gencode_codonChange",
-                        "Gencode_proteinChange",
-                        "Gencode_gcContent",
-                        "Gencode_referenceContext",
-                        "Gencode_otherTranscripts"
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_hugoSymbol",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_ncbiBuild",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_chromosome",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_start",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_end",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_variantClassification",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_secondaryVariantClassification",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_variantType",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_refAllele",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_tumorSeqAllele1",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_tumorSeqAllele2",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_genomeChange",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_annotationTranscript",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_transcriptStrand",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_transcriptExon",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_transcriptPos",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_cDnaChange",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_codonChange",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_proteinChange",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_gcContent",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_referenceContext",
+                        GencodeFuncotationFactory.DATA_SOURCE_NAME + "_otherTranscripts"
                 )
         );
     }
@@ -248,12 +253,12 @@ public class GencodeFuncotation implements Funcotation {
     public String getField(final String fieldName) {
 
         // Allow a user to specify the name of the field, or the fully-qualified name of the field
-        // with "Gencode_" at the start.
-        final String altFieldName = "Gencode_" + fieldName;
+        // with GencodeFuncotationFactory.DATA_SOURCE_NAME + "_" at the start.
+        final String altFieldName = GencodeFuncotationFactory.DATA_SOURCE_NAME + "_" + fieldName;
         final LinkedHashSet<String> fieldNames = getFieldNames();
 
         if ( fieldNames.contains(fieldName) || fieldNames.contains(altFieldName) ) {
-            switch(fieldName.replace("Gencode_", "")) {
+            switch(fieldName.replace(GencodeFuncotationFactory.DATA_SOURCE_NAME + "_", "")) {
                 case "hugoSymbol":
                     return (hugoSymbolSerializedOverride != null ? hugoSymbolSerializedOverride : (hugoSymbol != null ? hugoSymbol : ""));
                 case "ncbiBuild":

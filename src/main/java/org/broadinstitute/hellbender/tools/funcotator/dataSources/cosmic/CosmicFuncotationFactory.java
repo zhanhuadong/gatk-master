@@ -249,7 +249,8 @@ public class CosmicFuncotationFactory extends DataSourceFuncotationFactory {
         outputFuncotations.add(
                 new TableFuncotation(
                         new ArrayList<>(supportedFields),
-                        new ArrayList<>(Collections.singletonList(String.valueOf(numOverlappingMutations)))
+                        new ArrayList<>(Collections.singletonList(String.valueOf(numOverlappingMutations))),
+                        name
                 )
         );
 

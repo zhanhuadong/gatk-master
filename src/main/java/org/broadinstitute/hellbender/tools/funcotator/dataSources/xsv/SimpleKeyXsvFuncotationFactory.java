@@ -185,7 +185,7 @@ public class SimpleKeyXsvFuncotationFactory extends DataSourceFuncotationFactory
             final List<String> annotations = annotationMap.get( key );
             if ( annotations != null ) {
                 // Add our annotations to the list:
-                outputFuncotations.add( new TableFuncotation(annotationColumnNames, annotations) );
+                outputFuncotations.add( new TableFuncotation(annotationColumnNames, annotations, name) );
             }
         }
 

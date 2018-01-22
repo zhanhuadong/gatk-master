@@ -39,6 +39,8 @@ import static org.broadinstitute.hellbender.utils.codecs.gencode.GencodeGtfFeatu
  */
 public class GencodeFuncotationFactory extends DataSourceFuncotationFactory {
 
+    public static final String DATA_SOURCE_NAME = "Gencode";
+
     //==================================================================================================================
     // Private Static Members:
     /** Standard Logger.  */
@@ -191,7 +193,7 @@ public class GencodeFuncotationFactory extends DataSourceFuncotationFactory {
 
     @Override
     public String getName() {
-        return "Gencode";
+        return DATA_SOURCE_NAME;
     }
 
     //TODO: Add in version getter/setter:

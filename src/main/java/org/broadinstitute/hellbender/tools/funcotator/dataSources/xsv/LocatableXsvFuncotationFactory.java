@@ -91,7 +91,7 @@ public class LocatableXsvFuncotationFactory extends DataSourceFuncotationFactory
             for ( final Feature feature : featureList ) {
                 // Get the kind of feature we want here:
                 if ( (feature != null) && XsvTableFeature.class.isAssignableFrom(feature.getClass()) ) {
-                    outputFuncotations.add( new TableFuncotation((XsvTableFeature) feature) );
+                    outputFuncotations.add( new TableFuncotation((XsvTableFeature) feature, name) );
                 }
             }
         }

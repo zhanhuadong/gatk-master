@@ -49,7 +49,7 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
 
         final TableFuncotation funcotation =
                 new TableFuncotation(
-                    Arrays.asList("A", "B", "C"), Arrays.asList("1", "2", "3")
+                    Arrays.asList("A", "B", "C"), Arrays.asList("1", "2", "3"), "TableFuncotation"
                 );
 
         return new Object[][] {
@@ -70,19 +70,19 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
     Object[][] provideForTestSerializeToVcfString() {
         return new Object[][] {
                 {
-                    new TableFuncotation(Collections.emptyList(), Collections.emptyList()),
+                    new TableFuncotation(Collections.emptyList(), Collections.emptyList(), "Empty"),
                     ""
                 },
                 {
-                    new TableFuncotation(Collections.singletonList("A"), Collections.singletonList(("1"))),
+                    new TableFuncotation(Collections.singletonList("A"), Collections.singletonList(("1")), "OneVal"),
                     "1"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("A", "B"), Arrays.asList("1", "2")),
+                    new TableFuncotation(Arrays.asList("A", "B"), Arrays.asList("1", "2"), "TwoVals"),
                     "1|2"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("A", "B", "C"), Arrays.asList("1", "2", "3")),
+                    new TableFuncotation(Arrays.asList("A", "B", "C"), Arrays.asList("1", "2", "3"), "ThreeVals"),
                     "1|2|3"
                 },
         };
@@ -104,15 +104,15 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
         //final TableFuncotation tableFuncotation, final LinkedHashSet<String> expected
         return new Object[][] {
                 {
-                    new TableFuncotation(Collections.emptyList(), Collections.emptyList()),
+                    new TableFuncotation(Collections.emptyList(), Collections.emptyList(), "Empty"),
                     new LinkedHashSet<>(Collections.emptyList())
                 },
                 {
-                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL")),
+                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL"), "OneField"),
                     new LinkedHashSet<>(Collections.singletonList("TESTFIELD"))
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2"), Arrays.asList("TESTVAL1", "TESTVAL2")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2"), Arrays.asList("TESTVAL1", "TESTVAL2"), "TwoFields"),
                     new LinkedHashSet<>(Arrays.asList("TESTFIELD1", "TESTFIELD2"))
                 },
         };
@@ -123,32 +123,32 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
         //final TableFuncotation tableFuncotation, final String fieldName, final String expected
         return new Object[][] {
                 {
-                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL")),
+                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL"), "OneField"),
                     "TESTFIELD",
                     "TESTVAL"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2"), Arrays.asList("TESTVAL1", "TESTVAL2")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2"), Arrays.asList("TESTVAL1", "TESTVAL2"), "TwoFields"),
                     "TESTFIELD1",
                     "TESTVAL1"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2"), Arrays.asList("TESTVAL1", "TESTVAL2")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2"), Arrays.asList("TESTVAL1", "TESTVAL2"), "TwoFields"),
                     "TESTFIELD2",
                     "TESTVAL2"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3"), "ThreeFields"),
                     "TESTFIELD1",
                     "TESTVAL1"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3"), "ThreeFields"),
                     "TESTFIELD2",
                     "TESTVAL2"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3"), "ThreeFields"),
                     "TESTFIELD3",
                     "TESTVAL3"
                 },
@@ -160,19 +160,19 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
         //final TableFuncotation tableFuncotation, final String fieldName, final String expected
         return new Object[][] {
                 {
-                    new TableFuncotation(Collections.emptyList(), Collections.emptyList()),
+                    new TableFuncotation(Collections.emptyList(), Collections.emptyList(), "Empty"),
                     "TESTFIELD_OMICRON"
                 },
                 {
-                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL")),
+                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL"), "OneField"),
                     "testfield"
                 },
                 {
-                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL")),
+                    new TableFuncotation(Collections.singletonList("TESTFIELD"), Collections.singletonList("TESTVAL"), "OneField"),
                     "table_TESTFIELD"
                 },
                 {
-                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3")),
+                    new TableFuncotation(Arrays.asList("TESTFIELD1", "TESTFIELD2", "TESTFIELD3"), Arrays.asList("TESTVAL1", "TESTVAL2", "TESTVAL3"), "ThreeFields"),
                     "TESTFIELD4"
                 },
         };
@@ -186,7 +186,7 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
 
         final String fieldName = "PLACEHOLDER";
 
-        final TableFuncotation funcotation = new TableFuncotation( Collections.singletonList(fieldName), Collections.singletonList(fieldValue) );
+        final TableFuncotation funcotation = new TableFuncotation( Collections.singletonList(fieldName), Collections.singletonList(fieldValue), fieldName );
         Assert.assertEquals( funcotation.get(fieldName), fieldValue );
     }
 
@@ -211,13 +211,13 @@ public class TableFuncotationUnitTest extends GATKBaseTest {
 
     @Test(dataProvider = "provideListOfStrings")
     public void testKeySet(final List<String> kvNames) {
-        final TableFuncotation funcotation = new TableFuncotation(kvNames, kvNames.stream().map(s -> s + "VVV").collect(Collectors.toList()));
+        final TableFuncotation funcotation = new TableFuncotation(kvNames, kvNames.stream().map(s -> s + "VVV").collect(Collectors.toList()), "ListFuncotation");
         Assert.assertEquals( funcotation.keySet(), kvNames);
     }
 
     @Test(dataProvider = "provideListOfStrings")
     public void testValues(final List<String> kvNames) {
-        final TableFuncotation funcotation = new TableFuncotation(kvNames.stream().map(s -> s + "KEY").collect(Collectors.toList()), kvNames);
+        final TableFuncotation funcotation = new TableFuncotation(kvNames.stream().map(s -> s + "KEY").collect(Collectors.toList()), kvNames, "ListFuncotation");
         Assert.assertEquals( funcotation.values(), kvNames);
     }
 

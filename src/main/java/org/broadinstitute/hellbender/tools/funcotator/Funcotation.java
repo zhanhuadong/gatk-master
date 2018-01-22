@@ -24,6 +24,11 @@ public interface Funcotation {
     String serializeToVcfString();
 
     /**
+     * @return The name of the data source behind the {@link DataSourceFuncotationFactory} used to create this {@link Funcotation}.
+     */
+    String getDataSourceName();
+
+    /**
      * Get the names of the fields in this {@link Funcotation}.
      * @return The ordered set of fields in this {@link Funcotation} as a {@link LinkedHashSet} of {@link String}s.
      */

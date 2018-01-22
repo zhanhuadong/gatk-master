@@ -137,7 +137,8 @@ public class SimpleKeyXsvFuncotationFactoryUnitTest extends GATKBaseTest {
                                 Collections.singletonList(
                                         new TableFuncotation(
                                                 removeHelper(headerRowTable.get(startingHeaderRow), keyColumn),
-                                                removeHelper(dataTable.get(startingHeaderRow+1), keyColumn)
+                                                removeHelper(dataTable.get(startingHeaderRow+1), keyColumn),
+                                                "TestFuncotation_" + String.valueOf(keyColumn) + "_" + String.valueOf(startingHeaderRow)
                                         )
                                 )
                         }
@@ -162,7 +163,8 @@ public class SimpleKeyXsvFuncotationFactoryUnitTest extends GATKBaseTest {
                                 Collections.singletonList(
                                         new TableFuncotation(
                                                 removeHelper(headerRowTable.get(startingHeaderRow), keyColumn),
-                                                removeHelper(dataTable.get(startingHeaderRow+1), keyColumn)
+                                                removeHelper(dataTable.get(startingHeaderRow+1), keyColumn),
+                                                "TestFuncotation_" + String.valueOf(keyColumn) + "_" + String.valueOf(startingHeaderRow)
                                         )
                                 )
                         }

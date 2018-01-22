@@ -28,6 +28,11 @@ public class TableFuncotation implements Funcotation {
     // Private Members:
 
     /**
+     * Name of the factory that created this {@link TableFuncotation}.
+     */
+    private String dataSourceName;
+
+    /**
      * Names of the fields in this {@link TableFuncotation}.
      */
     private LinkedHashMap<String, String> fieldMap;
@@ -35,7 +40,7 @@ public class TableFuncotation implements Funcotation {
     //==================================================================================================================
     // Constructors:
 
-    public TableFuncotation(final List<String> fieldNames, final List<String> fieldValues ) {
+    public TableFuncotation(final List<String> fieldNames, final List<String> fieldValues, final String dataSourceName ) {
         if ( fieldNames.size() != fieldValues.size() ) {
             throw new UserException.BadInput("Field names and Field values are of different lengths!  This must not be!");
         }
@@ -44,9 +49,11 @@ public class TableFuncotation implements Funcotation {
         for ( int i = 0; i < fieldNames.size() ; ++i ) {
             fieldMap.put(fieldNames.get(i), fieldValues.get(i));
         }
+
+        this.dataSourceName = dataSourceName;
     }
 
-    public TableFuncotation(final XsvTableFeature xsvTableFeature) {
+    public TableFuncotation(final XsvTableFeature xsvTableFeature, final String dataSourceName) {
 
         final List<String> keys = xsvTableFeature.getHeaderWithoutLocationColuns();
         final List<String> values = xsvTableFeature.getValuesWithoutLocationColumns();
@@ -55,18 +62,17 @@ public class TableFuncotation implements Funcotation {
         for ( int i = 0; i < keys.size() ; ++i ) {
             fieldMap.put(keys.get(i), values.get(i));
         }
-    }
 
-    public TableFuncotation(final LinkedHashMap<String, String> fieldMap ) {
-        this.fieldMap = fieldMap;
-    }
-
-    public TableFuncotation(final TableFuncotation that ) {
-        this.fieldMap = new LinkedHashMap<>( that.fieldMap );
+        this.dataSourceName = dataSourceName;
     }
 
     //==================================================================================================================
     // Override Methods:
+
+    @Override
+    public String getDataSourceName() {
+        return dataSourceName;
+    }
 
     @Override
     public void setFieldSerializationOverrideValue(final String fieldName, final String overrideValue) {
