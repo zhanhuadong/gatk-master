@@ -19,6 +19,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.runtime.ProcessController;
 import org.broadinstitute.hellbender.utils.test.ArgumentsBuilder;
+import org.broadinstitute.hellbender.utils.test.BaseTest;
 import org.broadinstitute.hellbender.utils.test.GenomicsDBTestUtils;
 import org.broadinstitute.hellbender.utils.test.VariantContextTestUtils;
 import org.seqdoop.hadoop_bam.util.VCFHeaderReader;
@@ -26,6 +27,7 @@ import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import javax.validation.constraints.AssertTrue;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -262,7 +264,8 @@ public class GenotypeGVCFsIntegrationTest extends CommandLineProgramTest {
         final ArgumentsBuilder args = new ArgumentsBuilder()
                 .addVCF(getTestFile("alleleSpecific.g.vcf"))
                 .addOutput(output)
-                .addReference(new File(b37_reference_20_21));
-        runCommandLine(args);
+                .addReference(new File(b37_reference_20_21))
+                .addArgument("verbosity", "WARNING");
+        assertContains(captureStdout(() -> runCommandLine(args)), "-G Standard -G AS_Standard to the command");
     }
 }
