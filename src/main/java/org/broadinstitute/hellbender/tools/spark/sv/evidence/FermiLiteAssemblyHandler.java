@@ -66,7 +66,8 @@ public final class FermiLiteAssemblyHandler implements FindBreakpointEvidenceSpa
         }
 
         // patch up the assembly using read pairs to link contigs
-        final FermiLiteAssembly assembly;
+        final FermiLiteAssembly assembly = initialAssembly;
+/*
         if ( fastqDir == null ) {
                 assembly = reviseAssembly(initialAssembly, assemblyName, readsList, null);
         } else {
@@ -78,7 +79,7 @@ public final class FermiLiteAssemblyHandler implements FindBreakpointEvidenceSpa
                 throw new GATKException("Can't write "+detailsFile, ioe);
             }
         }
-
+*/
         // record the assembly as a GFA, if requested
         if ( fastqDir != null && writeGFAs ) {
             final String gfaName =  String.format("%s/%s.gfa", fastqDir, assemblyName);

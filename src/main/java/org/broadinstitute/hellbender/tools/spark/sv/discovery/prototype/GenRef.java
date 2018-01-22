@@ -1,14 +1,24 @@
 package org.broadinstitute.hellbender.tools.spark.sv.discovery.prototype;
 
 import org.apache.spark.api.java.JavaSparkContext;
+import org.broadinstitute.barclay.argparser.BetaFeature;
+import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 
 import java.io.IOException;
 
+@BetaFeature
+@CommandLineProgramProperties(
+        oneLineSummary = "(Internal) junk", summary = "complete crap",
+        programGroup = StructuralVariantDiscoveryProgramGroup.class)
 public class GenRef extends GATKSparkTool {
+    private static final long serialVersionUID = 1L;
+
     @Override public boolean requiresReference() { return true; }
+
     @Override public void runTool( final JavaSparkContext ctx ) {
         final String insert1a_5817182 = "Ctggtgtgtggatacgggggattactggtgtgtggatacgggagattcctggtgtgtggatacaggggattactggtgtgtggatacaggggattactggtgtgtggacagaggggattactggtatgtggacagaggggattactggtgtgtggatacaggggattactggtgtgtggacagagggattactggtgtgtggatatgggggattactggtgtgtggatacgagggatta";
         final String insert1b_5817272 = "GgattactggtgtgtggacagaggggattactggtatgtggacagaggggattactggtgtgtggatacaggggattactggtgtgtggacagagggattactggtgtgtggatatgggggattactggtgtgtggatacgagggattactggtgtgtggatacgggggattaccggtgtgtggacacgggggattacgggtgcatggacagaggggattaccagtgtgtggatacaggggattgctggtgtgtggacagaggggattactggtgtgtggatacgggggattactggtgtgtggaTATGGA";
@@ -24,7 +34,7 @@ public class GenRef extends GATKSparkTool {
                 ref.substring(5817183-start, 5817273-start) + insert1b_5817272.substring(1) +
                 ref.substring(5817273-start);
         final String chm13 =
-                ref.substring(0, 5817258-start) + insert13_5817257.substring(1) + ref.substring(5817258);
+                ref.substring(0, 5817258-start) + insert13_5817257.substring(1) + ref.substring(5817258-start );
         dumpFASTA("chm1", chm1);
         dumpFASTA("chm13", chm13);
     }

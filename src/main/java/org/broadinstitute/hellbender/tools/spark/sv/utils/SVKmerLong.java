@@ -123,6 +123,12 @@ public class SVKmerLong extends SVKmer implements Comparable<SVKmerLong>  {
     public final Base lastBase() { return Base.values()[(int)(valLow & 3)]; }
     public final int firstTrimer(final int kSize ) { return (int)(valHigh >>> (kSize-6)); }
     public final int lastTrimer() { return (int)valLow & 0x3F; }
+
+    /** Returns a kmer of size kSize-2 by removing the first and last base */
+    public final SVKmerLong removeFirstAndLastBase( final int kSize ) {
+        return new SVKmerLong(valHigh & ((1L << (kSize-2)) - 1L), valLow >> 2);
+    }
+
     @Override
     public boolean equals( final Object obj ) {
         return obj instanceof SVKmerLong && equals((SVKmerLong)obj);
