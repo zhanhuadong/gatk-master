@@ -77,6 +77,9 @@ public class MafOutputRenderer extends OutputRenderer {
     //==================================================================================================================
     // Private Members:
 
+    /** Flag to see if the header has been written to the output file yet. */
+    private boolean hasWrittenHeader = false;
+
     /**
      * {@link List} of the {@link DataSourceFuncotationFactory} objects that are being used in this run of {@link Funcotator}.
      */
@@ -137,7 +140,6 @@ public class MafOutputRenderer extends OutputRenderer {
     public void open() {
         try {
             printWriter = new PrintWriter(Files.newOutputStream(outputFilePath));
-            writeHeader();
         }
         catch (final IOException ex) {
             throw new UserException("Error opening output file path: " + outputFilePath.toUri().toString(), ex);
@@ -154,6 +156,10 @@ public class MafOutputRenderer extends OutputRenderer {
     public void write(final VariantContext variant, final List<Funcotation> funcotations) {
 
         //TODO: For this to work correctly you'll need to group funcotations by reference / alternate allele pairs.
+
+        if ( ! hasWrittenHeader ) {
+            writeHeader(variant);
+        }
 
         // Make sure we only output the variant here if it passed all filters:
         if ( variant.isFiltered() ) {
@@ -240,8 +246,9 @@ public class MafOutputRenderer extends OutputRenderer {
 
     /**
      * Write the header to the output file.
+     * @param variant A {@link VariantContext} to use to get the extra fields included with this MAF file.
      */
-    protected void writeHeader() {
+    protected void writeHeader(final VariantContext variant) {
         // Write out version:
         writeLine(COMMENT_STRING + "version " + VERSION);
         writeLine(COMMENT_STRING + COMMENT_STRING);

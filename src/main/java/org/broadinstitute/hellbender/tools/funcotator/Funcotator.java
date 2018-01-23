@@ -20,6 +20,7 @@ import org.broadinstitute.hellbender.tools.funcotator.dataSources.xsv.LocatableX
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.xsv.SimpleKeyXsvFuncotationFactory;
 import org.broadinstitute.hellbender.tools.funcotator.mafOutput.MafOutputRenderer;
 import org.broadinstitute.hellbender.tools.funcotator.vcfOutput.VcfOutputRenderer;
+import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.codecs.gencode.GencodeGtfFeature;
 import org.broadinstitute.hellbender.utils.codecs.xsvLocatableTable.XsvTableFeature;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
@@ -279,6 +280,8 @@ public class Funcotator extends VariantWalker {
 
     private List<FeatureInput<? extends Feature>> manualFeatureInputs = new ArrayList<>();
 
+    private Boolean inputReferenceIsB37 = null;
+
     //==================================================================================================================
 
     @Override
@@ -326,6 +329,18 @@ public class Funcotator extends VariantWalker {
 
         if ( !referenceContext.hasBackingDataSource() ) {
             throw new GATKException("No reference context for variant.  Cannot annotate!");
+        }
+
+        if ( inputReferenceIsB37 == null ) {
+            // NOTE AND WARNING:
+            // hg19 is from ucsc. b37 is from the genome reference consortium. ucsc decided the grc version had crap in it, so they blocked out some of the bases, aka "masked" them
+            // so the lengths of the contigs are the same, the bases are just _slightly_ different
+            inputReferenceIsB37 = FuncotatorUtils.isSequenceDictionaryUsingB37Reference(getSequenceDictionaryForDrivingVariants());
+            if ( inputReferenceIsB37 ) {
+                logger.warn("WARNING: You are using B37 as a reference.  " +
+                        "Funcotator will convert your variants to GRCh37, and this will be fine in 99.9% of cases.  " +
+                        "There MAY be some errors in the Y chromosome due to changes between the two references.");
+            }
         }
 
         // Place the variant on our queue to be funcotated:
@@ -387,8 +402,22 @@ public class Funcotator extends VariantWalker {
 
         // Get our feature inputs:
         final List<Feature> featureList = new ArrayList<>();
-        for ( final FeatureInput<? extends Feature> featureInput : manualFeatureInputs ) {
-            featureList.addAll( featureContext.getValues(featureInput) );
+
+        // Check to see if we need to query with a different reference convention (i.e. "chr1" vs "1").
+        if ( (referenceVersion == FuncotatorArgumentDefinitions.ReferenceVersionType.hg19) && inputReferenceIsB37 ) {
+            // Construct a new contig and new interval with no "chr" in front of it:
+            final String hg19Contig = FuncotatorUtils.convertB37ContigToHg19Contig( variant.getContig() );
+            final SimpleInterval hg19Interval = new SimpleInterval(hg19Contig, variant.getStart(), variant.getEnd());
+
+            // Get our features for the new interval:
+            for ( final FeatureInput<? extends Feature> featureInput : manualFeatureInputs ) {
+                featureList.addAll(featureContext.getValues(featureInput, hg19Interval)); 
+            }
+        }
+        else {
+            for ( final FeatureInput<? extends Feature> featureInput : manualFeatureInputs ) {
+                featureList.addAll(featureContext.getValues(featureInput));
+            }
         }
 
         // Create a place to keep our funcotations:

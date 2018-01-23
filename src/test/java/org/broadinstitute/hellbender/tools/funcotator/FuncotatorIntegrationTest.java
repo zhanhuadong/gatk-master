@@ -25,7 +25,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
 
     // Whether to output all files to a temporary, ephemeral folder.
     // This should always be true when checked in.
-    private static final boolean outputToTmpDir = true;
+    private static final boolean outputToTmpDir = false;
 
     static {
         if ( outputToTmpDir ) {
@@ -46,7 +46,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
                 {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.TRANSCRIPT_ID, FuncotatorArgumentDefinitions.OutputFormatType.VCF},
                 {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR19_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR19, FuncotatorTestConstants.MUC16_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME, FuncotatorArgumentDefinitions.OutputFormatType.VCF},
                 {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR19_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR19, FuncotatorTestConstants.MUC16_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.TRANSCRIPT_ID, FuncotatorArgumentDefinitions.OutputFormatType.VCF},
-                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME, FuncotatorArgumentDefinitions.OutputFormatType.MAF}
+                {FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER, FuncotatorArgumentDefinitions.ReferenceVersionType.hg19, FuncotatorTestConstants.HG19_CHR3_REFERENCE_FILE_NAME, FuncotatorTestConstants.VARIANT_FILE_HG19_CHR3, FuncotatorTestConstants.PIK3CA_TRANSCRIPT, SimpleKeyXsvFuncotationFactory.XsvDataKeyType.GENE_NAME, FuncotatorArgumentDefinitions.OutputFormatType.MAF},
         };
     }
 
@@ -94,7 +94,7 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         runCommandLine(arguments);
     }
 
-    @Test(enabled = false)
+    @Test(enabled = true)
     public void spotCheck() throws IOException {
 
         final File outputFile;
@@ -108,10 +108,11 @@ public class FuncotatorIntegrationTest extends CommandLineProgramTest {
         final List<String> arguments = new ArrayList<>();
 
         arguments.add("-" + StandardArgumentDefinitions.VARIANT_SHORT_NAME);
-        arguments.add("/Users/jonn/Development/oncotator_testing/BENCHMARK_INPUT.funcotator.vcf");
+//        arguments.add("/Users/jonn/Development/oncotator_testing/BENCHMARK_INPUT.funcotator.vcf");
+        arguments.add("/Users/jonn/Development/M2_01115161-TA1-filtered.vcf");
 
         arguments.add("-" + StandardArgumentDefinitions.REFERENCE_SHORT_NAME);
-        arguments.add("/Users/jonn/Development/references/GRCh37.p13.genome.fasta");
+        arguments.add("/Users/jonn/Development/references/Homo_sapiens_assembly19.fasta");
 
         arguments.add("--" + FuncotatorArgumentDefinitions.DATA_SOURCES_PATH_LONG_NAME);
         arguments.add(FuncotatorTestConstants.FUNCOTATOR_DATA_SOURCES_MAIN_FOLDER);
