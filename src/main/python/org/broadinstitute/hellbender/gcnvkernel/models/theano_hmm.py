@@ -307,3 +307,114 @@ class TheanoViterbi:
              viterbi_path_except_for_last_t])[::-1]
 
         return viterbi_path_full_t
+
+
+class HMMSegmentationQualityCalculator:
+    """Calculates quality metrics for hidden state segments for a given HMM.
+
+    Note:
+        The initializer requires the emission and transition probabilities, as well as the forward
+        and backward tables and the log posterior probability.
+    """
+    def __init__(self,
+                 log_emission_tc: np.ndarray,
+                 log_transition_tcc: np.ndarray,
+                 alpha_tc: np.ndarray,
+                 beta_tc: np.ndarray,
+                 log_posterior_prob_t: np.ndarray):
+        assert isinstance(log_emission_tc, np.ndarray)
+        assert log_emission_tc.ndim == 2
+        self.num_sites, self.num_states = log_emission_tc.shape
+
+        assert isinstance(log_transition_tcc, np.ndarray)
+        assert log_transition_tcc.shape == (self.num_sites - 1, self.num_states, self.num_states)
+
+        assert isinstance(alpha_tc, np.ndarray)
+        assert alpha_tc.shape == (self.num_sites, self.num_states)
+
+        assert isinstance(beta_tc, np.ndarray)
+        assert beta_tc.shape == (self.num_sites, self.num_states)
+
+        assert isinstance(log_posterior_prob_t, np.ndarray)
+        assert log_posterior_prob_t.shape == (self.num_sites,)
+
+        self.log_emission_tc = log_emission_tc
+        self.log_transition_tc = log_transition_tcc
+        self.alpha_tc = alpha_tc
+        self.beta_tc = beta_tc
+        self.log_posterior_prob_t = log_posterior_prob_t
+
+    def get_log_constrained_posterior_prob(self, start_index: int, end_index: int, allowed_states: np.ndarray) -> float:
+        """Calculates the constrained log posterior probability. At each site, only a subset of all states
+        are considered.
+
+        Args:
+            start_index: first site index (inclusive)
+            end_index: last site index (inclusive)
+            allowed_states:
+
+        Returns:
+            log constrained posterior probability (float)
+        """
+
+    def get_segment_call_quality(self, start_index: int, end_index: int, call_state: int) -> int:
+        """Calculates the phred-scaled posterior probability that all sites in a segment have the same
+        hidden state ("call").
+
+        Args:
+            start_index: first site index (inclusive)
+            end_index: last site index (inclusive)
+            call_state: segment call state index
+
+        Returns:
+            a phred-scaled probability
+        """
+        pass
+
+    def get_segment_start_quality(self, start_index: int, call_state: int) -> int:
+        """Calculates the phred-scaled posterior probability that a site marks the start of a segment.
+
+        Args:
+            start_index: left breakpoint index of a segment
+            call_state: segment call state index
+
+        Returns:
+            a phred-scaled probability
+        """
+        pass
+
+    def get_segment_end_quality(self, end_index: int, call_state: int) -> int:
+        """Calculates the phred-scaled posterior probability that a site marks the end of a segment.
+
+        Args:
+            end_index: right breakpoint index of a segment
+            call_state: segment call state index
+
+        Returns:
+
+        """
+        pass
+
+    @staticmethod
+    def log_prob_to_phred(log_prob: float) -> int:
+        """Converts probabilities in natural log scale to phred scale.
+
+        Args:
+            log_prob: a probability in the natural log scale
+
+        Returns:
+            phred-scaled probability
+        """
+        pass
+
+    @staticmethod
+    def log_prob_complement(log_prob: float) -> float:
+        """Calculates the complement of a probability in the natural log scale.
+
+        Args:
+            log_prob: a probability in the natural log scale
+
+        Returns:
+            complement of the the probability in the natural log scale
+        """
+        pass
