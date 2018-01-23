@@ -67,7 +67,7 @@ public class MafOutputRenderer extends OutputRenderer {
      * That is, if both dataSourceFieldName1 and dataSourceFieldName2 are present as funcotation fields, then only
      * dataSourceFieldName1 will be used as the outputField.
      */
-    private static final Map<String, List<String>> outputFieldNameMap = new HashMap<>();
+    private static final Map<String, List<String>> outputFieldNameMap = new LinkedHashMap<>();
 
     /**
      * Delimiter for fields in the output MAF file.
@@ -169,48 +169,15 @@ public class MafOutputRenderer extends OutputRenderer {
         final List<GencodeFuncotation> gencodeFuncotations = new ArrayList<>(1);
         final List<Funcotation> otherFuncotations = new ArrayList<>(funcotations.size());
         for ( final Funcotation funcotation : funcotations ) {
-            if ( GencodeFuncotation.class.isAssignableFrom(funcotation.getClass()) ) {
-                gencodeFuncotations.add((GencodeFuncotation) funcotation);
-
-                // We know we won't use secondary variant class here, so we add it to the extraFieldOutputMap:
-                setField(extraFieldOutputMap, "secondary_variant_classification", ((GencodeFuncotation) funcotation).getSecondaryVariantClassification() );
-            }
-            else {
-                // Add all the fields from the other funcotations into the extra field output:
-                for ( final String field : funcotation.getFieldNames() ) {
-                    setField(extraFieldOutputMap, field, funcotation.getField(field) );
-                }
+            // Add all the fields from the other funcotations into the extra field output:
+            for ( final String field : funcotation.getFieldNames() ) {
+                setField(extraFieldOutputMap, field, funcotation.getField(field) );
             }
         }
 
         // Set values for unused fields:
         outputMap.put("Score", UNUSED_STRING);
         outputMap.put("BAM_File", UNUSED_STRING);
-
-        // Go through Gencode funcotations as they're the basis for each line:
-        for ( final GencodeFuncotation gencodeFuncotation : gencodeFuncotations ) {
-            setField(outputMap, "Hugo_Symbol", gencodeFuncotation.getHugoSymbol());
-            setField(outputMap, "NCBI_Build", gencodeFuncotation.getNcbiBuild());
-            setField(outputMap, "Chromosome", gencodeFuncotation.getChromosome());
-            setField(outputMap, "Start_Position", gencodeFuncotation.getStart());
-            setField(outputMap, "End_Position", gencodeFuncotation.getEnd());
-            setField(outputMap, "Transcript_Strand", gencodeFuncotation.getTranscriptStrand());
-            setField(outputMap, "VariantClassification", gencodeFuncotation.getVariantClassification());
-            setField(outputMap, "Variant_Type", gencodeFuncotation.getVariantType());
-            setField(outputMap, "Reference_Allele", gencodeFuncotation.getRefAllele());
-            setField(outputMap, "Tumor_Seq_Allele1", gencodeFuncotation.getTumorSeqAllele1());
-            setField(outputMap, "Tumor_Seq_Allele2", gencodeFuncotation.getTumorSeqAllele2());
-            setField(outputMap, "Genome_Change", gencodeFuncotation.getGenomeChange() );
-            setField(outputMap, "Annotation_Transcript", gencodeFuncotation.getAnnotationTranscript() );
-            setField(outputMap, "Transcript_Exon", gencodeFuncotation.getTranscriptExonNumber() );
-            setField(outputMap, "Transcript_Position", gencodeFuncotation.getTranscriptPos() );
-            setField(outputMap, "cDNA_Change", gencodeFuncotation.getcDnaChange() );
-            setField(outputMap, "Codon_Change", gencodeFuncotation.getCodonChange() );
-            setField(outputMap, "Protein_Change", gencodeFuncotation.getProteinChange() );
-            setField(outputMap, "gc_content", gencodeFuncotation.getGcContent() );
-            setField(outputMap, "ref_context", gencodeFuncotation.getReferenceContext() );
-            setField(outputMap, "Other_Transcripts", gencodeFuncotation.getOtherTranscripts() );
-        }
 
         // Go through all output fields and see if any of the names in the value list are in our extraFieldOutputMap.
         // For any that match, we remove them from our extraFieldOutputMap and add them to the outputMap with the
@@ -219,6 +186,7 @@ public class MafOutputRenderer extends OutputRenderer {
             for ( final String fieldName : entry.getValue() ) {
                 if ( extraFieldOutputMap.containsKey(fieldName) ) {
                     outputMap.put( entry.getKey(), extraFieldOutputMap.remove(fieldName) );
+                    break;
                 }
             }
         }
@@ -390,49 +358,89 @@ public class MafOutputRenderer extends OutputRenderer {
      * Initializes the output map
      */
     private void initializeOutputFieldNameMap() {
-        outputFieldNameMap.put( "Hugo_Symbol",                   Arrays.asList("Hugo_Symbol", "gene", "Gene") );
-        outputFieldNameMap.put( "Entrez_Gene_Id",                Arrays.asList("Entrez_Gene_Id", "HGNC_Entrez Gene ID", "HGNC_Entrez Gene ID(supplied by NCBI)", "entrez_id", "gene_id") );
-        outputFieldNameMap.put( "Center",                        Arrays.asList("Center", "center") );
-        outputFieldNameMap.put( "NCBI_Build",                    Arrays.asList("NCBI_Build", "ncbi_build") );
-        outputFieldNameMap.put( "Chromosome",                    Arrays.asList("Chromosome", "chr", "contig", "chromosome", "chrom", "Chrom") );
-        outputFieldNameMap.put( "Start_position",                Arrays.asList("Start_position", "start", "Start", "start_pos", "pos") );
-        outputFieldNameMap.put( "End_position",                  Arrays.asList("End_position", "end", "End", "end_pos") );
-        outputFieldNameMap.put( "Strand",                        Arrays.asList("Strand", "Strand") );
-        outputFieldNameMap.put( "Variant_Classification",        Arrays.asList("Variant_Classification", "variant_classification") );
-        outputFieldNameMap.put( "Variant_Type",                  Arrays.asList("Variant_Type", "variant_type") );
-        outputFieldNameMap.put( "Reference_Allele",              Arrays.asList("Reference_Allele", "ref", "ref_allele", "reference_allele") );
-        outputFieldNameMap.put( "Tumor_Seq_Allele1",             Arrays.asList("Tumor_Seq_Allele1", "ref", "ref_allele", "reference_allele") );
-        outputFieldNameMap.put( "Tumor_Seq_Allele2",             Arrays.asList("Tumor_Seq_Allele2", "alt", "alt_allele", "alt2", "alt_allele2", "alternate_allele2", "observed_allele2", "alternate_allele", "observed_allele", "alt1", "alt_allele1", "alternate_allele1", "observed_allele1") );
-        outputFieldNameMap.put( "dbSNP_RS",                      Arrays.asList("dbSNP_RS", "dbsnp_rs") );
-        outputFieldNameMap.put( "dbSNP_Val_Status",              Arrays.asList("dbSNP_Val_Status", "dbsnp_val_status") );
-        outputFieldNameMap.put( "Tumor_Sample_Barcode",          Arrays.asList("Tumor_Sample_Barcode", "tumor_barcode", "tumor_id", "case_barcode", "case_id", "tumor_name") );
-        outputFieldNameMap.put( "Matched_Norm_Sample_Barcode",   Arrays.asList("Matched_Norm_Sample_Barcode", "normal_barcode", "normal_id", "control_barcode", "control_id", "normal_name", "sample_name") );
-        outputFieldNameMap.put( "Match_Norm_Seq_Allele1",        Arrays.asList("Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele1") );
-        outputFieldNameMap.put( "Match_Norm_Seq_Allele2",        Arrays.asList("Match_Norm_Seq_Allele2", "Match_Norm_Seq_Allele2") );
-        outputFieldNameMap.put( "Tumor_Validation_Allele1",      Arrays.asList("Tumor_Validation_Allele1", "Tumor_Validation_Allele1") );
-        outputFieldNameMap.put( "Tumor_Validation_Allele2",      Arrays.asList("Tumor_Validation_Allele2", "Tumor_Validation_Allele2") );
-        outputFieldNameMap.put( "Match_Norm_Validation_Allele1", Arrays.asList("Match_Norm_Validation_Allele1", "Match_Norm_Validation_Allele1") );
-        outputFieldNameMap.put( "Match_Norm_Validation_Allele2", Arrays.asList("Match_Norm_Validation_Allele2", "Match_Norm_Validation_Allele2") );
-        outputFieldNameMap.put( "Verification_Status",           Arrays.asList("Verification_Status", "Verification_Status") );
-        outputFieldNameMap.put( "Validation_Status",             Arrays.asList("Validation_Status", "validation_status") );
-        outputFieldNameMap.put( "Mutation_Status",               Arrays.asList("Mutation_Status", "status") );
-        outputFieldNameMap.put( "Sequencing_Phase",              Arrays.asList("Sequencing_Phase", "phase") );
-        outputFieldNameMap.put( "Sequence_Source",               Arrays.asList("Sequence_Source", "source") );
-        outputFieldNameMap.put( "Validation_Method",             Arrays.asList("Validation_Method", "Validation_Method") );
-        outputFieldNameMap.put( "Score",                         Arrays.asList("Score", "Score") );
-        outputFieldNameMap.put( "BAM_file",                      Arrays.asList("BAM_file", "bam", "bam_file") );
-        outputFieldNameMap.put( "Sequencer",                     Arrays.asList("Sequencer", "sequencer", "platform") );
-        outputFieldNameMap.put( "Tumor_Sample_UUID",             Arrays.asList("Tumor_Sample_UUID", "tumor_uuid", "case_uuid", "tumor_barcode", "tumor_id", "case_barcode", "case_id", "tumor_name", "Tumor_Sample_Barcode") );
-        outputFieldNameMap.put( "Matched_Norm_Sample_UUID",      Arrays.asList("Matched_Norm_Sample_UUID", "normal_uuid", "control_uuid", "normal_barcode", "normal_id", "control_barcode", "control_id", "normal_name", "sample_name", "Matched_Norm_Sample_Barcode") );
-        outputFieldNameMap.put( "Genome_Change",                 Arrays.asList("Genome_Change", "genome_change") );
-        outputFieldNameMap.put( "Annotation_Transcript",         Arrays.asList("Annotation_Transcript", "annotation_transcript", "transcript_id") );
-        outputFieldNameMap.put( "Transcript_Strand",             Arrays.asList("Transcript_Strand", "transcript_strand") );
-        outputFieldNameMap.put( "Transcript_Exon",               Arrays.asList("Transcript_Exon", "transcript_exon") );
-        outputFieldNameMap.put( "Transcript_Position",           Arrays.asList("Transcript_Position", "transcript_position") );
-        outputFieldNameMap.put( "cDNA_Change",                   Arrays.asList("cDNA_Change", "transcript_change") );
-        outputFieldNameMap.put( "Codon_Change",                  Arrays.asList("Codon_Change", "codon_change") );
-        outputFieldNameMap.put( "Protein_Change",                Arrays.asList("Protein_Change", "protein_change") );
-        outputFieldNameMap.put( "Other_Transcripts",             Arrays.asList("Other_Transcripts", "other_transcripts") );
+
+        outputFieldNameMap.put( "Hugo_Symbol",                          Arrays.asList("Hugo_Symbol", "Gencode_hugoSymbol", "gene", "Gene") );
+        outputFieldNameMap.put( "Entrez_Gene_Id",                       Arrays.asList("Entrez_Gene_Id", "HGNC_Entrez Gene ID", "HGNC_Entrez Gene ID(supplied by NCBI)", "entrez_id", "gene_id") );
+        outputFieldNameMap.put( "Center",                               Arrays.asList("Center", "center") );
+        outputFieldNameMap.put( "NCBI_Build",                           Arrays.asList("NCBI_Build", "Gencode_ncbiBuild", "ncbi_build") );
+        outputFieldNameMap.put( "Chromosome",                           Arrays.asList("Chromosome", "Gencode_chromosome", "chr", "contig", "chromosome", "chrom", "Chrom") );
+        outputFieldNameMap.put( "Start_Position",                       Arrays.asList("Start_position", "Gencode_start", "start", "Start", "start_pos", "pos") );
+        outputFieldNameMap.put( "End_Position",                         Arrays.asList("End_position", "Gencode_end", "end", "End", "end_pos") );
+        outputFieldNameMap.put( "Strand",                               Arrays.asList("Strand", "Strand") );
+        outputFieldNameMap.put( "Variant_Classification",               Arrays.asList("Variant_Classification", "Gencode_variantClassification", "variant_classification") );
+        outputFieldNameMap.put( "Variant_Type",                         Arrays.asList("Variant_Type", "Gencode_variantType", "variant_type") );
+        outputFieldNameMap.put( "Reference_Allele",                     Arrays.asList("Reference_Allele", "Gencode_refAllele", "ref", "ref_allele", "reference_allele") );
+        outputFieldNameMap.put( "Tumor_Seq_Allele1",                    Arrays.asList("Tumor_Seq_Allele1", "Gencode_tumorSeqAllele1", "ref", "ref_allele", "reference_allele") );
+        outputFieldNameMap.put( "Tumor_Seq_Allele2",                    Arrays.asList("Tumor_Seq_Allele2", "Gencode_tumorSeqAllele2", "alt", "alt_allele", "alt2", "alt_allele2", "alternate_allele2", "observed_allele2", "alternate_allele", "observed_allele", "alt1", "alt_allele1", "alternate_allele1", "observed_allele1") );
+        outputFieldNameMap.put( "dbSNP_RS",                             Arrays.asList("dbSNP_RS", "dbsnp_rs") );
+        outputFieldNameMap.put( "dbSNP_Val_Status",                     Arrays.asList("dbSNP_Val_Status", "dbsnp_val_status") );
+        outputFieldNameMap.put( "Tumor_Sample_Barcode",                 Arrays.asList("Tumor_Sample_Barcode", "tumor_barcode", "tumor_id", "case_barcode", "case_id", "tumor_name") );
+        outputFieldNameMap.put( "Matched_Norm_Sample_Barcode",          Arrays.asList("Matched_Norm_Sample_Barcode", "normal_barcode", "normal_id", "control_barcode", "control_id", "normal_name", "sample_name") );
+        outputFieldNameMap.put( "Match_Norm_Seq_Allele1",               Arrays.asList("Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele1") );
+        outputFieldNameMap.put( "Match_Norm_Seq_Allele2",               Arrays.asList("Match_Norm_Seq_Allele2", "Match_Norm_Seq_Allele2") );
+        outputFieldNameMap.put( "Tumor_Validation_Allele1",             Arrays.asList("Tumor_Validation_Allele1", "Tumor_Validation_Allele1") );
+        outputFieldNameMap.put( "Tumor_Validation_Allele2",             Arrays.asList("Tumor_Validation_Allele2", "Tumor_Validation_Allele2") );
+        outputFieldNameMap.put( "Match_Norm_Validation_Allele1",        Arrays.asList("Match_Norm_Validation_Allele1", "Match_Norm_Validation_Allele1") );
+        outputFieldNameMap.put( "Match_Norm_Validation_Allele2",        Arrays.asList("Match_Norm_Validation_Allele2", "Match_Norm_Validation_Allele2") );
+        outputFieldNameMap.put( "Verification_Status",                  Arrays.asList("Verification_Status", "Verification_Status") );
+        outputFieldNameMap.put( "Validation_Status",                    Arrays.asList("Validation_Status", "validation_status") );
+        outputFieldNameMap.put( "Mutation_Status",                      Arrays.asList("Mutation_Status", "status") );
+        outputFieldNameMap.put( "Sequencing_Phase",                     Arrays.asList("Sequencing_Phase", "phase") );
+        outputFieldNameMap.put( "Sequence_Source",                      Arrays.asList("Sequence_Source", "source") );
+        outputFieldNameMap.put( "Validation_Method",                    Arrays.asList("Validation_Method", "Validation_Method") );
+        outputFieldNameMap.put( "Score",                                Arrays.asList("Score", "Score") );
+        outputFieldNameMap.put( "BAM_file",                             Arrays.asList("BAM_file", "bam", "bam_file") );
+        outputFieldNameMap.put( "Sequencer",                            Arrays.asList("Sequencer", "sequencer", "platform") );
+        outputFieldNameMap.put( "Tumor_Sample_UUID",                    Arrays.asList("Tumor_Sample_UUID", "tumor_uuid", "case_uuid", "tumor_barcode", "tumor_id", "case_barcode", "case_id", "tumor_name", "Tumor_Sample_Barcode") );
+        outputFieldNameMap.put( "Matched_Norm_Sample_UUID",             Arrays.asList("Matched_Norm_Sample_UUID", "normal_uuid", "control_uuid", "normal_barcode", "normal_id", "control_barcode", "control_id", "normal_name", "sample_name", "Matched_Norm_Sample_Barcode") );
+
+        outputFieldNameMap.put( "Genome_Change",                        Arrays.asList("Genome_Change", "Gencode_genomeChange", "genome_change") );
+        outputFieldNameMap.put( "Annotation_Transcript",                Arrays.asList("Annotation_Transcript", "Gencode_annotationTranscript", "annotation_transcript", "transcript_id") );
+        outputFieldNameMap.put( "Transcript_Strand",                    Arrays.asList("Transcript_Strand", "Gencode_transcriptStrand", "transcript_strand") );
+        outputFieldNameMap.put( "Transcript_Exon",                      Arrays.asList("Transcript_Exon", "Gencode_transcriptExon", "transcript_exon") );
+        outputFieldNameMap.put( "Transcript_Position",                  Arrays.asList("Transcript_Position", "Gencode_transcriptPos", "transcript_position") );
+        outputFieldNameMap.put( "cDNA_Change",                          Arrays.asList("cDNA_Change", "Gencode_cDnaChange", "transcript_change") );
+        outputFieldNameMap.put( "Codon_Change",                         Arrays.asList("Codon_Change", "Gencode_codonChange", "codon_change") );
+        outputFieldNameMap.put( "Protein_Change",                       Arrays.asList("Protein_Change", "Gencode_proteinChange", "protein_change") );
+        outputFieldNameMap.put( "Other_Transcripts",                    Arrays.asList("Other_Transcripts", "Gencode_otherTranscripts", "other_transcripts") );
+        outputFieldNameMap.put( "Refseq_mRNA_Id",                       Arrays.asList("Refseq_mRNA_Id", "gencode_xref_refseq_mRNA_id", "ENSEMBL_RefSeq_mRNA_accession", "RefSeq_mRNA_Id", "HGNC_RefSeq IDs") );
+        outputFieldNameMap.put( "Refseq_prot_Id",                       Arrays.asList("Refseq_prot_Id", "gencode_xref_refseq_prot_acc", "ENSEMBL_RefSeq_protein_accession", "RefSeq_prot_Id") );
+        outputFieldNameMap.put( "SwissProt_acc_Id",                     Arrays.asList("SwissProt_acc_Id", "uniprot_accession", "UniProt_uniprot_accession") );
+        outputFieldNameMap.put( "SwissProt_entry_Id",                   Arrays.asList("SwissProt_entry_Id", "uniprot_entry_name", "UniProt_uniprot_entry_name") );
+        outputFieldNameMap.put( "Description",                          Arrays.asList("Description", "RefSeq_Description", "HGNC_Approved Name") );
+        outputFieldNameMap.put( "UniProt_AApos",                        Arrays.asList("UniProt_AApos", "UniProt_AAxform_aapos", "uniprot_AA_pos") );
+        outputFieldNameMap.put( "UniProt_Region",                       Arrays.asList("UniProt_Region", "UniProt_AA_region") );
+        outputFieldNameMap.put( "UniProt_Site",                         Arrays.asList("UniProt_Site", "UniProt_AA_site") );
+        outputFieldNameMap.put( "UniProt_Natural_Variations",           Arrays.asList("UniProt_Natural_Variations", "UniProt_AA_natural_variation") );
+        outputFieldNameMap.put( "UniProt_Experimental_Info",            Arrays.asList("UniProt_Experimental_Info", "UniProt_AA_experimental_info") );
+        outputFieldNameMap.put( "GO_Biological_Process",                Arrays.asList("GO_Biological_Process", "UniProt_GO_Biological_Process") );
+        outputFieldNameMap.put( "GO_Cellular_Component",                Arrays.asList("GO_Cellular_Component", "UniProt_GO_Cellular_Component") );
+        outputFieldNameMap.put( "GO_Molecular_Function",                Arrays.asList("GO_Molecular_Function", "UniProt_GO_Molecular_Function") );
+        outputFieldNameMap.put( "COSMIC_overlapping_mutations",         Arrays.asList("COSMIC_overlapping_mutations", "COSMIC_overlapping_mutation_AAs") );
+        outputFieldNameMap.put( "COSMIC_fusion_genes",                  Arrays.asList("COSMIC_fusion_genes", "COSMIC_FusionGenes_fusion_genes") );
+        outputFieldNameMap.put( "COSMIC_tissue_types_affected",         Arrays.asList("COSMIC_tissue_types_affected", "COSMIC_Tissue_tissue_types_affected") );
+        outputFieldNameMap.put( "COSMIC_total_alterations_in_gene",     Arrays.asList("COSMIC_total_alterations_in_gene", "COSMIC_Tissue_total_alterations_in_gene") );
+        outputFieldNameMap.put( "Tumorscape_Amplification_Peaks",       Arrays.asList("Tumorscape_Amplification_Peaks", "TUMORScape_Amplification_Peaks") );
+        outputFieldNameMap.put( "Tumorscape_Deletion_Peaks",            Arrays.asList("Tumorscape_Deletion_Peaks", "TUMORScape_Deletion_Peaks") );
+        outputFieldNameMap.put( "TCGAscape_Amplification_Peaks",        Arrays.asList("TCGAscape_Amplification_Peaks", "TCGAScape_Amplification_Peaks") );
+        outputFieldNameMap.put( "TCGAscape_Deletion_Peaks",             Arrays.asList("TCGAscape_Deletion_Peaks", "TCGAScape_Deletion_Peaks") );
+        outputFieldNameMap.put( "DrugBank",                             Arrays.asList("DrugBank", "UniProt_DrugBank") );
+        outputFieldNameMap.put( "ref_context",                          Arrays.asList("ref_context", "Gencode_referenceContext", "ref_context") );
+        outputFieldNameMap.put( "gc_content",                           Arrays.asList("gc_content", "Gencode_gcContent", "gc_content") );
+        outputFieldNameMap.put( "CCLE_ONCOMAP_overlapping_mutations",   Arrays.asList("CCLE_ONCOMAP_overlapping_mutations", "CCLE_By_GP_overlapping_mutations") );
+        outputFieldNameMap.put( "CCLE_ONCOMAP_total_mutations_in_gene", Arrays.asList("CCLE_ONCOMAP_total_mutations_in_gene", "CCLE_By_Gene_total_mutations_in_gene") );
+        outputFieldNameMap.put( "CGC_Mutation_Type",                    Arrays.asList("CGC_Mutation_Type", "CGC_Mutation Type") );
+        outputFieldNameMap.put( "CGC_Translocation_Partner",            Arrays.asList("CGC_Translocation_Partner", "CGC_Translocation Partner") );
+        outputFieldNameMap.put( "CGC_Tumor_Types_Somatic",              Arrays.asList("CGC_Tumor_Types_Somatic", "CGC_Tumour Types  (Somatic Mutations)") );
+        outputFieldNameMap.put( "CGC_Tumor_Types_Germline",             Arrays.asList("CGC_Tumor_Types_Germline", "CGC_Tumour Types (Germline Mutations)") );
+        outputFieldNameMap.put( "CGC_Other_Diseases",                   Arrays.asList("CGC_Other_Diseases", "CGC_Other Syndrome/Disease") );
+        outputFieldNameMap.put( "DNARepairGenes_Role",                  Arrays.asList("DNARepairGenes_Role", "HumanDNARepairGenes_Role") );
+        outputFieldNameMap.put( "FamilialCancerDatabase_Syndromes",     Arrays.asList("FamilialCancerDatabase_Syndromes", "Familial_Cancer_Genes_Syndrome") );
+        outputFieldNameMap.put( "MUTSIG_Published_Results",             Arrays.asList("MUTSIG_Published_Results", "MutSig Published Results_Published_Results") );
+        outputFieldNameMap.put( "OREGANNO_ID",                          Arrays.asList("OREGANNO_ID", "ORegAnno_ID") );
+        outputFieldNameMap.put( "OREGANNO_Values",                      Arrays.asList("OREGANNO_Values", "ORegAnno_Values") );
+
+        outputFieldNameMap.put( "tumor_f",                              Arrays.asList("tumor_f", "sample_allelic_fraction", "AF") );
     }
 
     //==================================================================================================================

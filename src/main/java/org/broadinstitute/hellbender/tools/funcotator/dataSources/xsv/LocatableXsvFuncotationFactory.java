@@ -57,11 +57,12 @@ public class LocatableXsvFuncotationFactory extends DataSourceFuncotationFactory
     // Constructors:
 
     public LocatableXsvFuncotationFactory(){
-        this(DEFAULT_NAME);
+        this(DEFAULT_NAME, DEFAULT_VERSION_STRING);
     }
 
-    public LocatableXsvFuncotationFactory(final String name){
+    public LocatableXsvFuncotationFactory(final String name, final String version){
         this.name = name;
+        this.version = version;
     }
 
     //==================================================================================================================

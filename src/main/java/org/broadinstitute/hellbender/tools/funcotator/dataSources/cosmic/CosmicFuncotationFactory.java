@@ -120,12 +120,15 @@ public class CosmicFuncotationFactory extends DataSourceFuncotationFactory {
     // Constructors:
 
     public CosmicFuncotationFactory(final Path pathToCosmicDb) {
-        this(pathToCosmicDb, new LinkedHashMap<>());
+        this(pathToCosmicDb, new LinkedHashMap<>(), DEFAULT_VERSION_STRING);
     }
 
     public CosmicFuncotationFactory(final Path pathToCosmicDb,
-                                    final LinkedHashMap<String, String> annotationOverridesMap) {
+                                    final LinkedHashMap<String, String> annotationOverridesMap,
+                                    final String version) {
         this.pathToCosmicDb = pathToCosmicDb;
+
+        this.version = version;
 
         // Connect to the DB:
         try {

@@ -8,6 +8,7 @@ import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.engine.ReferenceDataSource;
 import org.broadinstitute.hellbender.exceptions.GATKException;
+import org.broadinstitute.hellbender.tools.funcotator.DataSourceFuncotationFactory;
 import org.broadinstitute.hellbender.tools.funcotator.Funcotation;
 import org.broadinstitute.hellbender.tools.funcotator.FuncotatorTestConstants;
 import org.broadinstitute.hellbender.tools.funcotator.dataSources.TableFuncotation;
@@ -259,10 +260,10 @@ public class LocatableXsvFuncotationFactoryUnitTest extends GATKBaseTest {
     public void testGetName(final String name, final String expected) {
         final LocatableXsvFuncotationFactory locatableXsvFuncotationFactory;
         if ( name == null ) {
-            locatableXsvFuncotationFactory = new LocatableXsvFuncotationFactory(LocatableXsvFuncotationFactory.DEFAULT_NAME);
+            locatableXsvFuncotationFactory = new LocatableXsvFuncotationFactory(LocatableXsvFuncotationFactory.DEFAULT_NAME, DataSourceFuncotationFactory.DEFAULT_VERSION_STRING);
         }
         else {
-            locatableXsvFuncotationFactory = new LocatableXsvFuncotationFactory(name);
+            locatableXsvFuncotationFactory = new LocatableXsvFuncotationFactory(name, DataSourceFuncotationFactory.DEFAULT_VERSION_STRING);
         }
 
         Assert.assertEquals( locatableXsvFuncotationFactory.getName(), expected );

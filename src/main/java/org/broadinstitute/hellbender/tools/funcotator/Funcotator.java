@@ -577,7 +577,8 @@ public class Funcotator extends VariantWalker {
     private void createLocatableXsvDataSource(final Path dataSourceFile,
                                               final Properties dataSourceProperties,
                                               final LinkedHashMap<String, String> annotationOverridesMap) {
-        final String name   = dataSourceProperties.getProperty("name");
+        final String name      = dataSourceProperties.getProperty("name");
+        final String version   = dataSourceProperties.getProperty("version");
 
         // Inject our features into our list of feature data sources:
         final FeatureInput<? extends Feature> featureInput = addFeatureInputsAfterInitialization(
@@ -592,7 +593,7 @@ public class Funcotator extends VariantWalker {
         manualFeatureInputs.add(featureInput);
 
         // Create a locatable XSV feature reader to handle XSV Locatable features:
-        final LocatableXsvFuncotationFactory locatableXsvFuncotationFactory = new LocatableXsvFuncotationFactory();
+        final LocatableXsvFuncotationFactory locatableXsvFuncotationFactory = new LocatableXsvFuncotationFactory(name, version);
 
         // Set the supported fields by the LocatableXsvFuncotationFactory:
         locatableXsvFuncotationFactory.setSupportedFuncotationFields(
@@ -634,10 +635,13 @@ public class Funcotator extends VariantWalker {
                                         final Properties dataSourceProperties,
                                         final LinkedHashMap<String, String> annotationOverridesMap) {
 
+        final String version   = dataSourceProperties.getProperty("version");
+
         final CosmicFuncotationFactory cosmicFuncotationFactory =
                 new CosmicFuncotationFactory(
                   dataSourceFile.resolveSibling(IOUtils.getPath(dataSourceProperties.getProperty("src_file"))),
-                  annotationOverridesMap
+                  annotationOverridesMap,
+                  version
                 );
 
         // Add our factory to our factory list:

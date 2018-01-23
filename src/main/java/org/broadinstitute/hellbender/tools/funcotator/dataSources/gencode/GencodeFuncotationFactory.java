@@ -1344,7 +1344,7 @@ public class GencodeFuncotationFactory extends DataSourceFuncotationFactory {
          // The end position is inclusive, so we need to make sure we don't double-count the start position (so we subtract 1):
          gencodeFuncotationBuilder.setEnd(variant.getStart() + altAllele.length() - 1)
                  .setVariantType(getVariantType(variant.getReference(), altAllele))
-                 .setTumorSeqAllele1(altAllele.getBaseString())
+                 .setTumorSeqAllele1(variant.getReference().getBaseString())
                  .setTumorSeqAllele2(altAllele.getBaseString())
                  .setGenomeChange(getGenomeChangeString(variant, altAllele, gtfFeature))
                  .setAnnotationTranscript(transcript.getTranscriptId())
@@ -1534,7 +1534,7 @@ public class GencodeFuncotationFactory extends DataSourceFuncotationFactory {
 
         funcotationBuilder.setVariantClassification( GencodeFuncotation.VariantClassification.IGR );
         funcotationBuilder.setRefAlleleAndStrand( refAllele, Strand.POSITIVE );
-        funcotationBuilder.setTumorSeqAllele1( altAllele.getBaseString() );
+        funcotationBuilder.setTumorSeqAllele1( refAllele.getBaseString() );
         funcotationBuilder.setTumorSeqAllele2( altAllele.getBaseString() );
 
         final String referenceBases = FuncotatorUtils.getBasesInWindowAroundReferenceAllele(refAllele, altAllele, Strand.POSITIVE, referenceWindow, reference);
