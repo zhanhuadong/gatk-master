@@ -47,7 +47,7 @@ public final class MultiVariantWalkerIntegrationTest extends CommandLineProgramT
         {
             count++;
 
-            //make sure we only move forward; if getSequenceDictionary returns null then there is only
+            //make sure we only move forward; if getSamFileHeader returns null then there is only
             //a single input, and it has no sequence dictionary, so skip the test since we're just
             //iterating over a single input in order
             if (locus != null && getSequenceDictionaryForDrivingVariants() != null) {

@@ -1,13 +1,20 @@
 package org.broadinstitute.hellbender.tools.copynumber.utils.annotatedregion;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import htsjdk.samtools.SAMSequenceDictionary;
+import htsjdk.tribble.readers.AsciiLineReader;
+import htsjdk.tribble.readers.AsciiLineReaderIterator;
+import org.apache.commons.lang3.StringUtils;
 import org.broadinstitute.hdf5.Utils;
+import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.copynumber.formats.collections.AbstractLocatableCollection;
 import org.broadinstitute.hellbender.tools.copynumber.formats.metadata.LocatableMetadata;
 import org.broadinstitute.hellbender.tools.copynumber.formats.metadata.SimpleLocatableMetadata;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
+import org.broadinstitute.hellbender.utils.codecs.xsvLocatableTable.XsvLocatableTableCodec;
+import org.broadinstitute.hellbender.utils.codecs.xsvLocatableTable.XsvTableFeature;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.tsv.DataLine;
 import org.broadinstitute.hellbender.utils.tsv.TableColumnCollection;
@@ -15,11 +22,16 @@ import org.broadinstitute.hellbender.utils.tsv.TableReader;
 import org.broadinstitute.hellbender.utils.tsv.TableUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.broadinstitute.hellbender.tools.copynumber.utils.annotatedregion.SimpleAnnotatedGenomicRegion.*;
 
@@ -169,5 +181,69 @@ public class SimpleAnnotatedGenomicRegionCollection extends AbstractLocatableCol
         final TableColumnCollection annotationColumns = new TableColumnCollection(finalColumnList);
         return new SimpleAnnotatedGenomicRegionCollection(new SimpleLocatableMetadata(dictionary), simpleAnnotatedGenomicRegions, annotationColumns,
                 getDataLineToRecordFunction(new HashSet<>(finalColumnList)), getRecordToDataLineBiConsumer(finalColumnList));
+    }
+
+    //TODO: Docs
+    public static SimpleAnnotatedGenomicRegionCollection create(final Path input, final Path inputConfigFile, final Set<String> headersOfInterest) {
+
+        //TODO: Test for existence/viability of both files.
+
+        final XsvLocatableTableCodec codec = new XsvLocatableTableCodec(inputConfigFile);
+        final List<SimpleAnnotatedGenomicRegion> regions = new ArrayList<>();
+
+        if (codec.canDecode(input.toString())) {
+            try (final InputStream fileInputStream = Files.newInputStream(input)) {
+
+                // Lots of scaffolding to do reading here:
+                final AsciiLineReaderIterator lineReaderIterator = new AsciiLineReaderIterator(AsciiLineReader.from(fileInputStream));
+                final List<String> header = codec.readActualHeader(lineReaderIterator);
+                checkAllHeadersOfInterestPresent(headersOfInterest, header);
+
+                final List<String> featureCols = codec.getHeaderWithoutLocationColumns();
+
+                while (lineReaderIterator.hasNext()) {
+                    final XsvTableFeature feature = codec.decode(lineReaderIterator.next());
+                    if (feature == null) {
+                        continue;
+                    }
+
+                    final List<String> featureValues = feature.getValuesWithoutLocationColumns();
+
+                    final SortedMap<String, String> annotations = new TreeMap<>();
+                    IntStream.range(0, featureCols.size()).boxed()
+                            .filter(i -> (headersOfInterest == null) || headersOfInterest.contains(featureCols.get(i)))
+                            .forEach(i -> annotations.put(featureCols.get(i), featureValues.get(i)));
+
+                    regions.add(new SimpleAnnotatedGenomicRegion(
+                            new SimpleInterval(feature.getContig(), feature.getStart(), feature.getEnd()),
+                            annotations));
+                }
+
+                final LocatableMetadata metadata = new SimpleLocatableMetadata(codec.createSamFileHeader().getSequenceDictionary());
+                return new SimpleAnnotatedGenomicRegionCollection(metadata, regions, new TableColumnCollection(codec.getHeaderWithoutLocationColumns()),
+                        getDataLineToRecordFunction(new HashSet<>(codec.getHeaderWithoutLocationColumns())),
+                        getRecordToDataLineBiConsumer(codec.getHeaderWithoutLocationColumns()));
+
+            }
+            catch ( final FileNotFoundException ex ) {
+                throw new GATKException("Error - could not find test file: " + input, ex);
+            }
+            catch ( final IOException ex ) {
+                throw new GATKException("Error - IO problem with file " + input, ex);
+            }
+        }
+        else {
+            throw new UserException.BadInput("Could not parse xsv file.");
+        }
+    }
+
+    private static void checkAllHeadersOfInterestPresent(final Set<String> headersOfInterest, final List<String> header) {
+        if ((headersOfInterest != null) && !header.containsAll(headersOfInterest)) {
+            final Set<String> unusedColumnsOfInterest = Sets.difference(headersOfInterest, new HashSet<>(header));
+            if (unusedColumnsOfInterest.size() > 0) {
+                final List<String> missingColumns = new ArrayList<>(unusedColumnsOfInterest);
+                throw new UserException.BadInput("Some columns of interest specified by the user were not seen in any input files: " + StringUtils.join(missingColumns, ", "));
+            }
+        }
     }
 }

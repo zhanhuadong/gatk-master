@@ -1,7 +1,13 @@
 package org.broadinstitute.hellbender.utils.codecs.xsvLocatableTable;
 
+import com.google.common.collect.ImmutableList;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMTextHeaderCodec;
+import htsjdk.samtools.util.BufferedLineReader;
+import htsjdk.samtools.util.LineReader;
 import htsjdk.tribble.AsciiFeatureCodec;
 import htsjdk.tribble.readers.LineIterator;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.broadinstitute.hellbender.exceptions.UserException;
@@ -9,12 +15,16 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
 import java.io.InputStream;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Codec class to read from XSV (e.g. csv, tsv, etc.) files.
@@ -44,6 +54,7 @@ public final class XsvLocatableTableCodec extends AsciiFeatureCodec<XsvTableFeat
     // Public Static Members:
 
     public static final String COMMENT_DELIMITER = "#";
+    public static final String SAM_HEADER_DELIMITER = "@";
 
     public static final String CONFIG_FILE_CONTIG_COLUMN_KEY = "contig_column";
     public static final String CONFIG_FILE_START_COLUMN_KEY = "start_column";
@@ -81,11 +92,31 @@ public final class XsvLocatableTableCodec extends AsciiFeatureCodec<XsvTableFeat
     /** The current position in the file that is being read. */
     private long currentLine = 0;
 
+    /** Config file to use instead of a sibling config file.  Null if not using an override.*/
+    private Path overrideConfigFile = null;
+
+    /** Comments, if any */
+    private List<String> comments = new ArrayList<>();
+
+    /** SAM header as strings. */
+    private List<String> samFileHeaderAsStrings = new ArrayList<>();
+
     //==================================================================================================================
     // Constructors:
 
     public XsvLocatableTableCodec() {
         super(XsvTableFeature.class);
+    }
+
+    /** Constructor for when a configuration file is specified instead of using a sibling config file.
+     *
+     * This cannot be used with auto decoding.
+     *
+     * @param overrideConfigFile {@link Path} to the file to use as a configuration file for the given file.
+     */
+    public XsvLocatableTableCodec(final Path overrideConfigFile) {
+        super(XsvTableFeature.class);
+        this.overrideConfigFile = overrideConfigFile;
     }
 
     //==================================================================================================================
@@ -96,7 +127,8 @@ public final class XsvLocatableTableCodec extends AsciiFeatureCodec<XsvTableFeat
 
         // Get the paths to our file and the config file:
         final Path inputFilePath = IOUtils.getPath(path);
-        final Path configFilePath = getConfigFilePath(inputFilePath);
+        final Path configFilePath = (overrideConfigFile != null ?
+                overrideConfigFile : getConfigFilePath(inputFilePath));
 
         // Check that our files are good for eating... I mean reading...
         if ( validateInputDataFile(inputFilePath) && validateInputDataFile(configFilePath) ) {
@@ -117,6 +149,10 @@ public final class XsvLocatableTableCodec extends AsciiFeatureCodec<XsvTableFeat
         ++currentLine;
 
         if (s.startsWith(COMMENT_DELIMITER)) {
+            return null;
+        }
+
+        if (s.startsWith(SAM_HEADER_DELIMITER)) {
             return null;
         }
 
@@ -149,16 +185,24 @@ public final class XsvLocatableTableCodec extends AsciiFeatureCodec<XsvTableFeat
             ++currentLine;
 
             // Ignore commented out lines:
-            if ( !line.startsWith(COMMENT_DELIMITER) ) {
+            if ( !line.startsWith(COMMENT_DELIMITER) && !line.startsWith(SAM_HEADER_DELIMITER)) {
 
                 // The first non-commented line is the column header.
                 // Add the data source name to teh start of each header row,
                 // then add those rows to the header object.
                 header = Arrays.stream(line.split(delimiter))
-                        .map(x -> dataSourceName + "_" + x)
+                        .map(x -> StringUtils.isEmpty(dataSourceName) ? x : dataSourceName + "_" + x)
                         .collect(Collectors.toCollection(ArrayList::new));
 
                 return header;
+            }
+
+            if (line.startsWith(COMMENT_DELIMITER)) {
+                comments.add(line);
+            }
+
+            if (line.startsWith(SAM_HEADER_DELIMITER)) {
+                samFileHeaderAsStrings.add(line);
             }
         }
 
@@ -256,7 +300,38 @@ public final class XsvLocatableTableCodec extends AsciiFeatureCodec<XsvTableFeat
         }
     }
 
+    /** TODO: Tests of this class and overridden config files.
+     * Creates a copy of the internal comments upon each invocation.
+     *
+     * @return an immutable list of all of the comment lines in the xsv
+     */
+    public ImmutableList<String> getComments() {
+        return ImmutableList.copyOf(comments);
+    }
 
+    /**
+     *
+     * @return copy of the sam file header created from the input file.
+     */
+    public SAMFileHeader createSamFileHeader() {
+        final LineReader reader = BufferedLineReader.fromString(StringUtils.join(samFileHeaderAsStrings, "\n"));
+        final SAMTextHeaderCodec codec = new SAMTextHeaderCodec();
+        return codec.decode(reader, null);
+    }
+
+    /**
+     * Get the header from this {@link XsvLocatableTableCodec} without the columns that contain location information.
+     * Specifically the columns specified by the following fields are not included:
+     *  {@link XsvLocatableTableCodec#contigColumn}
+     *  {@link XsvLocatableTableCodec#startColumn}
+     *  {@link XsvLocatableTableCodec#endColumn}
+     * @return The header for this {@link XsvLocatableTableCodec} without location columns.
+     */
+    public List<String> getHeaderWithoutLocationColumns() {
+        return IntStream.range(0, header.size()).boxed()
+                .filter(i -> (i != contigColumn) && (i != startColumn) && (i != endColumn))
+                .map(i -> header.get(i)).collect(Collectors.toList());
+    }
 
     //==================================================================================================================
     // Helper Data Types:
