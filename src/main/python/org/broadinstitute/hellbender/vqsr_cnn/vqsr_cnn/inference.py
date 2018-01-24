@@ -28,6 +28,7 @@ ambiguity_codes = {'K':[0,0,0.5,0.5], 'M':[0.5,0.5,0,0], 'R':[0.5,0,0,0.5], 'Y':
 
 
 tensor_maps_2d = ['read_tensor']
+tensor_maps_1d = ['reference']
 
 # Annotation sets
 annotations = {
@@ -109,13 +110,14 @@ def score_and_write_batch(args, model, file_out, fifo, batch_size, python_batch_
 			read_batch.append(read_tuples_to_read_tensor(args, read_tuples, ref_start, insert_dict))
 			print('read_batch len:', len(read_batch))
 
-	if len(read_batch) == 0:
-		return
-
-	if args.tensor_map in tensor_maps_2d:
-		predictions = model.predict({'read_tensor':np.array(read_batch), 'annotations':np.array(annotation_batch)}, batch_size=python_batch_size)
-	else:
+	if args.tensor_map in tensor_maps_1d:
 		predictions = model.predict([np.array(reference_batch), np.array(annotation_batch)], batch_size=python_batch_size)
+	elif args.tensor_map in tensor_maps_2d:
+		if len(read_batch) > 0:
+			predictions = model.predict({'read_tensor':np.array(read_batch), 'annotations':np.array(annotation_batch)}, batch_size=python_batch_size)
+	else:
+		raise ValueError('Unknown tensor mapping.  Check architecture file.', args.tensor_map)
+
 	indel_scores = predictions_to_indel_scores(predictions)
 	snp_scores = predictions_to_snp_scores(predictions)
 
@@ -548,6 +550,7 @@ def set_args_and_get_model_from_semantics(args, semantics_json):
 		args.data_dir = semantics['data_dir']
 
 	weight_path_hd5 = os.path.join(os.path.dirname(semantics_json), semantics['architecture'])
+	print('Loading keras weight file from:', weight_path_hd5)
 	model = load_model(weight_path_hd5, custom_objects=get_metric_dict(args.labels))
 	model.summary()
 	return model
