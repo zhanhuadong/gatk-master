@@ -148,6 +148,8 @@ public class NeuralNetInference extends VariantWalker {
             scoreFile = File.createTempFile(outputFile, ".temp");
             if (!keepTempFile){
                 scoreFile.deleteOnExit();
+            } else{
+                logger.info("Saving temp file from python:"+scoreFile.getAbsolutePath());
             }
             pythonExecutor.sendSynchronousCommand(String.format("tempFile = open('%s', 'w+')" + NL, scoreFile.getAbsolutePath()));
             pythonExecutor.sendSynchronousCommand("import vqsr_cnn" + NL);
@@ -303,10 +305,9 @@ public class NeuralNetInference extends VariantWalker {
 
 
     private void writeOutputVCFWithScores(){
+        final VariantContextWriter vcfWriter = createVCFWriter(new File(outputFile));
 
-
-        try (final Scanner scoreScan = new Scanner(scoreFile);
-             final VariantContextWriter vcfWriter = createVCFWriter(new File(outputFile))) {
+        try (final Scanner scoreScan = new Scanner(scoreFile)) {
             scoreScan.useDelimiter("\\n");
             writeVCFHeader(vcfWriter);
             final VariantFilter variantfilter = makeVariantFilter();
