@@ -5,6 +5,7 @@ import pymc3 as pm
 from typing import Optional, Set
 from .. import types
 from . import commons
+from scipy.misc import logsumexp
 
 
 class TheanoForwardBackward:
@@ -227,10 +228,10 @@ class TheanoViterbi:
         log_emission_tc = tt.matrix('log_emission_tc')
 
         inputs = [temperature, log_prior_c, log_trans_tcc, log_emission_tc]
-        viterbi_path_full_t = self._get_symbolic_log_viterbi_chain(
+        viterbi_constrained_path_full_t = self._get_symbolic_log_viterbi_chain(
             temperature, log_prior_c, log_trans_tcc, log_emission_tc)
 
-        return th.function(inputs=inputs, outputs=viterbi_path_full_t)
+        return th.function(inputs=inputs, outputs=viterbi_constrained_path_full_t)
 
     @staticmethod
     def _get_symbolic_log_viterbi_chain(temperature: tt.scalar,
@@ -296,17 +297,17 @@ class TheanoViterbi:
 
         # obtain the Viterbi chain from omega_tc and psi_tc
         last_best_state = tt.argmax(omega_tc[-1, :])
-        viterbi_path_except_for_last_t, _ = th.scan(
+        viterbi_constrained_path_except_for_last_t, _ = th.scan(
             fn=calculate_previous_best_state,
             sequences=[psi_tc],
             outputs_info=[last_best_state],
             go_backwards=True)
 
-        viterbi_path_full_t = tt.concatenate(
+        viterbi_constrained_path_full_t = tt.concatenate(
             [tt.stack(last_best_state),
-             viterbi_path_except_for_last_t])[::-1]
+             viterbi_constrained_path_except_for_last_t])[::-1]
 
-        return viterbi_path_full_t
+        return viterbi_constrained_path_full_t
 
 
 class HMMSegmentationQualityCalculator:
@@ -318,16 +319,17 @@ class HMMSegmentationQualityCalculator:
     """
     def __init__(self,
                  log_emission_tc: np.ndarray,
-                 log_transition_tcc: np.ndarray,
+                 log_trans_tcc: np.ndarray,
                  alpha_tc: np.ndarray,
                  beta_tc: np.ndarray,
-                 log_posterior_prob_tc: np.ndarray):
+                 log_posterior_prob_tc: np.ndarray,
+                 log_data_likelihood: float):
         assert isinstance(log_emission_tc, np.ndarray)
         assert log_emission_tc.ndim == 2
         self.num_sites, self.num_states = log_emission_tc.shape
 
-        assert isinstance(log_transition_tcc, np.ndarray)
-        assert log_transition_tcc.shape == (self.num_sites - 1, self.num_states, self.num_states)
+        assert isinstance(log_trans_tcc, np.ndarray)
+        assert log_trans_tcc.shape == (self.num_sites - 1, self.num_states, self.num_states)
 
         assert isinstance(alpha_tc, np.ndarray)
         assert alpha_tc.shape == (self.num_sites, self.num_states)
@@ -339,100 +341,46 @@ class HMMSegmentationQualityCalculator:
         assert log_posterior_prob_tc.shape == (self.num_sites, self.num_states)
 
         self.log_emission_tc = log_emission_tc
-        self.log_transition_tcc = log_transition_tcc
+        self.log_trans_tcc = log_trans_tcc
         self.alpha_tc = alpha_tc
         self.beta_tc = beta_tc
         self.log_posterior_prob_tc = log_posterior_prob_tc
+        self.log_data_likelihood = log_data_likelihood
 
-        self._log_constrained_posterior_prob_theano_func =\
-            self._get_compiled_log_constrained_posterior_prob_theano_func()
+        self._constrained_path_log_likelihood_theano_func =\
+            self._get_compiled_constrained_path_log_likelihood_theano_func()
 
     @staticmethod
-    def _get_symbolic_log_constrained_posterior_prob(start_index: tt.lscalar,
-                                                     end_index: tt.lscalar,
-                                                     allowed_states: tt.lvector,
-                                                     log_emission_tc: tt.dmatrix,
-                                                     log_transition_tcc: tt.dtensor3,
-                                                     alpha_tc: tt.dmatrix,
-                                                     beta_tc: tt.dmatrix) -> tt.dscalar:
-        """todo.
+    def _get_symbolic_constrained_path_log_likelihood(alpha_first_c: tt.dvector,
+                                                      beta_last_c: tt.dvector,
+                                                      log_emission_tc: tt.dmatrix,
+                                                      log_trans_tcc: tt.dtensor3) -> tt.dscalar:
 
-        Args:
-            start_index:
-            end_index:
-            allowed_states:
-            log_emission_tc:
-            log_transition_tcc:
-            alpha_tc:
-            beta_tc:
+        def update_alpha(c_log_emission_c: tt.dvector,
+                         c_log_trans_cc: tt.dmatrix,
+                         p_alpha_c: tt.dvector):
+            return c_log_emission_c + pm.math.logsumexp(p_alpha_c.dimshuffle(0, 'x') +
+                                                        c_log_trans_cc, axis=0).dimshuffle(1)
 
-        Returns:
+        alpha_seg_iters, _ = th.scan(
+            fn=update_alpha,
+            sequences=[log_emission_tc, log_trans_tcc],
+            outputs_info=[alpha_first_c])
+        alpha_seg_end_c = alpha_seg_iters[-1, :]
 
-        """
-        # hidden state likelihoods on the first site
-        start_constrained_log_likelihoods_c = alpha_tc[start_index, allowed_states]
-
-        def update_log_likelihoods(curr_constrained_log_emission_c: tt.dvector,
-                                   curr_constrained_log_transition_cc: tt.dmatrix,
-                                   prev_constrained_log_likelihoods_c: tt.dvector):
-            """todo.
-            Args:
-                curr_constrained_log_emission_c:
-                curr_constrained_log_transition_cc:
-                prev_constrained_log_likelihoods_c:
-
-            Returns:
-
-            """
-            next_constrained_likelihoods_c = curr_constrained_log_emission_c + pm.math.logsumexp(
-                prev_constrained_log_likelihoods_c.dimshuffle(0, 'x') +
-                curr_constrained_log_transition_cc, axis=0).dimshuffle(1)
-            return next_constrained_likelihoods_c
-
-        # required quantities on the segment and in the constrained state space
-        log_seg_emission_tc = log_emission_tc[(start_index + 1):(end_index + 1), :]
-        log_seg_transition_tcc = log_transition_tcc[start_index:end_index, :, :]
-        log_seg_constrained_emission_tc = log_seg_emission_tc[:, allowed_states]
-        log_seg_constrained_transition_tcc = log_seg_transition_tcc[:, allowed_states, allowed_states]
-
-        seg_constrained_log_likelihoods, _ = th.scan(
-            fn=update_log_likelihoods,
-            sequences=[log_seg_constrained_emission_tc, log_seg_constrained_transition_tcc],
-            outputs_info=[start_constrained_log_likelihoods_c])
-        end_constrained_log_likelihoods_c = seg_constrained_log_likelihoods[-1, :]
-
-        end_constrained_log_data_likelihood = pm.math.logsumexp(
-            end_constrained_log_likelihoods_c + beta_tc[end_index, allowed_states])
-
-        end_unconstrained_log_data_likelihood = pm.logsumexp(
-            alpha_tc[end_index, :] + beta_tc[end_index, :])
-
-        return end_constrained_log_data_likelihood - end_unconstrained_log_data_likelihood
+        return pm.math.logsumexp(alpha_seg_end_c + beta_last_c)
 
     @staticmethod
     @th.configparser.change_flags(compute_test_value="ignore")
-    def _get_compiled_log_constrained_posterior_prob_theano_func():
-        """todo.
-
-        Returns:
-
-        """
-        start_index = tt.lscalar('start_index')
-        end_index = tt.lscalar('end_index')
-        allowed_states = tt.lvector('allowed_states')
+    def _get_compiled_constrained_path_log_likelihood_theano_func():
+        alpha_first_c = tt.dvector('alpha_first_c')
+        beta_last_c = tt.dvector('beta_last_c')
         log_emission_tc = tt.dmatrix('log_emission_tc')
-        log_transition_tcc = tt.dtensor3('log_transition_tcc')
-        alpha_tc = tt.dmatrix('alpha_tc')
-        beta_tc = tt.dmatrix('beta_tc')
+        log_trans_tcc = tt.dtensor3('log_trans_tcc')
 
-        inputs = [start_index, end_index, allowed_states,
-                  log_emission_tc, log_transition_tcc,
-                  alpha_tc, beta_tc]
-
-        output = HMMSegmentationQualityCalculator._get_symbolic_log_constrained_posterior_prob(
-            start_index, end_index, allowed_states,
-            log_emission_tc, log_transition_tcc,
-            alpha_tc, beta_tc)
+        inputs = [alpha_first_c, beta_last_c, log_emission_tc, log_trans_tcc]
+        output = HMMSegmentationQualityCalculator._get_symbolic_constrained_path_log_likelihood(
+            alpha_first_c, beta_last_c, log_emission_tc, log_trans_tcc)
 
         return th.function(inputs=inputs, outputs=output)
 
@@ -455,13 +403,23 @@ class HMMSegmentationQualityCalculator:
         assert end_index < self.num_sites
         assert end_index >= start_index
         assert all(isinstance(item, int) and 0 <= item < self.num_states for item in allowed_states),\
-            "The set of allowed states must be integers and in range [0, {0}]".format(self.num_states)
-        allowed_states_ndarray = np.asarray(sorted(allowed_states))
+            "The set of allowed states must be integers and in range [0, {0}]".format(self.num_states - 1)
+        allowed_states_list = sorted(allowed_states)
 
-        return self._log_constrained_posterior_prob_theano_func(
-            start_index, end_index, allowed_states_ndarray,
-            self.log_emission_tc, self.log_transition_tcc,
-            self.alpha_tc, self.beta_tc)
+        constrained_alpha_first_c = self.alpha_tc[start_index, allowed_states_list]
+        constrained_beta_last_c = self.beta_tc[end_index, allowed_states_list]
+        if end_index == start_index:  # single-site segment
+            return logsumexp(constrained_alpha_first_c + constrained_beta_last_c) - self.log_data_likelihood
+        else:
+            # calculate the required slices of the log emission and log transition representing
+            # paths that only contain the allowed states
+            constrained_log_emission_tc =\
+                self.log_emission_tc[(start_index + 1):(end_index + 1), allowed_states_list]
+            constrained_log_trans_tcc =\
+                self.log_trans_tcc[start_index:end_index, allowed_states_list, :][:, :, allowed_states_list]
+            return np.asscalar(self._constrained_path_log_likelihood_theano_func(
+                constrained_alpha_first_c, constrained_beta_last_c,
+                constrained_log_emission_tc, constrained_log_trans_tcc) - self.log_data_likelihood)
 
     def get_segment_call_quality(self, start_index: int, end_index: int, call_state: int) -> int:
         """Calculates the phred-scaled posterior probability that all sites in a segment have the same
